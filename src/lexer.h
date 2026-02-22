@@ -8,18 +8,21 @@
 #include <vector>
 
 #include "token.h"
-#include "source.h"
+#include "input_file.h"
+#include "error.h"
 
 namespace gnarl {
 
 class Lexer final {
 public:
-    static std::vector<Token> lex_to_buffer(const SourceFile& source_file);
+    static std::vector<Token> lex_to_buffer(
+            const InputFile& input_file, Error* error);
 
 private:
-    Lexer(const SourceFile& source_file)
-        : source(source_file.source()),
-        source_file(source_file)
+    Lexer(const InputFile& input_file, Error* error)
+        : error(error),
+        source(input_file.source()), 
+        input_file(input_file)
     {}
 
     void lex(std::vector<Token>& buffer);
@@ -45,12 +48,13 @@ private:
     char m_current = 0;
 
     uint32_t lineno = 1;
-    size_t bol = 0;
+    size_t bol = -1;
     size_t tok_start;
     size_t m_position = 0;
 
+    Error* error;
     std::string_view source;
-    const SourceFile& source_file;
+    const InputFile& input_file;
 };
 
 }

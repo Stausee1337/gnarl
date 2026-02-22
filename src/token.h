@@ -3,11 +3,11 @@
 
 #include <string_view>
 
-#include "source.h"
+#include "position.h"
 
 namespace gnarl {
 
-enum TokenKind {
+enum class TokenKind {
     EOS,
     Error,
 

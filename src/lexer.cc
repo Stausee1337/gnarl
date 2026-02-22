@@ -43,6 +43,7 @@ Token Lexer::lex_one_token() {
     if (ispunct(c))
         return lex_punct();
 
+    *error = Error(make_position(), "I have no idea what this is");
     return make_token(TokenKind::Error);
 }
 
@@ -160,84 +161,6 @@ Token Lexer::lex_punct() {
     return make_token(TokenKind::UnknownOp);
 }
 
-
-class StringParser final {
-public:
-    enum class QuoteKind {
-        Single,
-        Double,
-    };
-
-    StringParser(QuoteKind quote_kind)
-        : quote_kind_(quote_kind)
-    {}
-
-    void feed(char c);
-    bool is_ended() const { return state_ == State::Ended; }
-
-private:
-    void normal(char c);
-    void escape(char c);
-
-    enum class State {
-        Normal,
-        Escape,
-        Ended,
-    };
-
-    QuoteKind quote_kind_;
-    State state_ = State::Normal;
-    std::string buffer;
-};
-
-void StringParser::feed(char c) {
-    switch (state_) {
-        case State::Normal:
-            normal(c);
-        case State::Escape:
-            escape(c);
-        case State::Ended:
-            ABORT("call to feed in Ended state");
-    }
-}
-
-void StringParser::normal(char c) {
-    switch (c) {
-        case '\\':
-            state_ = State::Escape;
-            break;
-        case '\n':
-        case '\r':
-            state_ = State::Ended;
-            // *err = Err("String literal is unclosed");
-            break;
-        case '\'':
-            if (quote_kind_ == QuoteKind::Single)
-                state_ = State::Ended;
-            break;
-        case '"':
-            if (quote_kind_ == QuoteKind::Double)
-                state_ = State::Ended;
-            break;
-        default:
-            buffer.push_back(c);
-    }
-}
-
-void StringParser::escape(char c) {
-    state_ = State::Normal;
-    switch (c) {
-        case '\\': buffer.push_back('\\');
-        case '\'':
-            if (quote_kind_ == QuoteKind::Single)
-                buffer.push_back('\'');
-        case '"':
-            if (quote_kind_ == QuoteKind::Double)
-                buffer.push_back('"');
-    }
-    buffer.push_back(c);
-}
-
 Token Lexer::lex_string_literal() {
     char c = current();
     char end = c;
@@ -252,7 +175,7 @@ Token Lexer::lex_string_literal() {
     } while (c != end && c != '\n' && c != '\r');
 
     if (c != end) {
-        // *err = Err("unclosed stirng literal");
+        *error = Error(make_position(), "Newline in string constant");
         return make_token(TokenKind::Error);
     }
 
@@ -279,7 +202,7 @@ Token Lexer::make_token(TokenKind kind) const {
 }
 
 Position Lexer::make_position() const {
-    return Position(&source_file, lineno, position() - bol);
+    return Position(&input_file, lineno, position() - bol);
 }
 
 void Lexer::eat_whitespace() {
@@ -314,11 +237,11 @@ void Lexer::bump() {
     m_current = source[++m_position];
 }
 
-std::vector<Token> Lexer::lex_to_buffer(const SourceFile& source_file) {
+std::vector<Token> Lexer::lex_to_buffer(const InputFile& input_file, Error* error) {
     std::vector<Token> buffer;
-    if (source_file.is_empty()) return buffer;
+    if (input_file.is_empty()) return buffer;
 
-    Lexer lexer(source_file);
+    Lexer lexer(input_file, error);
     lexer.lex(buffer);
     return buffer;
 }
