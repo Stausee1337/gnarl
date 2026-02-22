@@ -1,10 +1,10 @@
-#include <cassert>
-#include <cstdlib>
+#include <stdlib.h>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
-#include "gnarl/lexer.h"
+#include "lexer.h"
+#include "assertions.h"
 
 namespace gnarl {
 
@@ -197,7 +197,7 @@ void StringParser::feed(char c) {
         case State::Escape:
             escape(c);
         case State::Ended:
-            assert(false && "call to feed in Ended state");
+            ABORT("call to feed in Ended state");
     }
 }
 

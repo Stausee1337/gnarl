@@ -2,8 +2,9 @@
 #ifndef GNARL_ASSERTIONS_H_
 #define GNARL_ASSERTIONS_H_
 
-#include <cstdint>
-namespace gnarl {
+#include <stdint.h>
+
+namespace assertions {
 
 #define _IMPL_CHECK(call, condition)    \
     do {                                \
@@ -15,6 +16,9 @@ namespace gnarl {
 
 #define DCHECK(condition) \
     _IMPL_CHECK(::assertions::DCheck(#condition), condition)
+
+#define ABORT(message) \
+    ::assertions::DCheck(message)
 
 struct Location {
 

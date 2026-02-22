@@ -3,7 +3,7 @@
 
 #include <string_view>
 
-#include "gnarl/source.h"
+#include "source.h"
 
 namespace gnarl {
 

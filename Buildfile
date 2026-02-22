@@ -4,13 +4,15 @@ includes += ["./src"]
 static_library(
     name = 'gnarl_lib',
     sources = [
-        'src/gnarl/commandline.cc',
+        'src/commandline.cc',
+        'src/lexer.cc',
+        'src/assertions.cc',
     ],
 )
 
 executable(
     name = 'gnarl',
-    sources = [ 'src/gnarl/main.cc' ],
+    sources = [ 'src/main.cc' ],
     deps = [ ':gnarl_lib' ],
 )
 

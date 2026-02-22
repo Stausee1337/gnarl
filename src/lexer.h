@@ -2,15 +2,13 @@
 #ifndef GNARL_LEXER_H_
 #define GNARL_LEXER_H_
 
-#include <math.h>
 #include <stdint.h>
-#include <assert.h>
 #include <limits>
 #include <string_view>
 #include <vector>
 
-#include "gnarl/token.h"
-#include "gnarl/source.h"
+#include "token.h"
+#include "source.h"
 
 namespace gnarl {
 

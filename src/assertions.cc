@@ -1,10 +1,10 @@
 
-#include <cstdio>
-#include <cstdlib>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "gnarl/assertions.h"
+#include "assertions.h"
 
-namespace gnarl {
+namespace assertions {
 
 [[noreturn]] void DCheck(const char* condition, const Location& location) {
     fprintf(stderr, "%s:%u: %s: ", location.filename, location.lineno, location.function_name);
