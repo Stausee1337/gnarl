@@ -5,7 +5,7 @@
 
 namespace gnarl {
 
-class InputFile {
+class InputFile final {
 public:
     InputFile(std::string source)
         : m_source(source)

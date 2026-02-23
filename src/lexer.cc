@@ -14,10 +14,10 @@ void Lexer::lex(std::vector<Token>& buffer) {
 
     while (true) {
         Token tok = lex_one_token();
-        buffer.push_back(tok);
-
         if (tok.kind() == TokenKind::EOS || tok.kind() == TokenKind::Error)
             break;
+
+        buffer.push_back(tok);
         previous = tok;
     }
 }
@@ -35,7 +35,7 @@ Token Lexer::lex_one_token() {
     if (c == '#')
         return lex_comment();
 
-    if (c >= '0' && c <= '9')
+    if ((c >= '0' && c <= '9') || c == '-')
         return lex_number_literal();
 
     if (c == '"' || c == '\'')
@@ -44,6 +44,7 @@ Token Lexer::lex_one_token() {
     if (isalpha(c) || c == '_')
         return lex_identifier_or_keyword();
 
+    // FIXME: `ispunct` probably isn't selective enough here (referring to original gn)
     if (ispunct(c))
         return lex_punct();
 
@@ -219,6 +220,8 @@ Token Lexer::lex_string_literal() {
 
 Token Lexer::lex_number_literal() {
     char c = current();
+    if (c == '-')
+        bump();
     bump();
 
     while (true) {

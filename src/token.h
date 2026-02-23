@@ -47,11 +47,13 @@ enum class TokenKind {
     UnknownOp,
 
     LineComment,
-    BlockComment,
     SuffixComment,
+    BlockComment,
 };
 
 struct Token {
+    Token() = default;
+
     Token(TokenKind kind, std::string_view value, Position position)
         : m_kind(kind),
         m_value(value),

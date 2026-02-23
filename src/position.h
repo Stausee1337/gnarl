@@ -10,7 +10,7 @@ namespace gnarl {
 
 class InputFile;
 
-struct Position {
+struct Position final {
 
     Position() = default;
 
@@ -38,7 +38,7 @@ private:
     uint32_t m_column;
 };
 
-struct Span {
+struct Span final {
     Span() = default;
 
     Span(const Position& start, const Position& end)

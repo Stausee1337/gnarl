@@ -11,7 +11,9 @@
 
 namespace gnarl {
 
-class Error {
+class BaseNode;
+
+class Error final {
 public:
 
     Error() = default;
@@ -26,6 +28,10 @@ public:
           std::string help = std::string());
 
     Error(const Span& span,
+          std::string message,
+          std::string help = std::string());
+
+    Error(const BaseNode*,
           std::string message,
           std::string help = std::string());
 

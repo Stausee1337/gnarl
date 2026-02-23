@@ -6,24 +6,6 @@
 
 int main() {
     auto source = R"a(
-inputs = idl_lexer_parser_files + idl_compiler_files # to be explicit (covered by parsetab)
-inputs += "hi"
-
-if (true) {
-  if (true) {
-    inputs = idl_lexer_parser_files + idl_compiler_files # to be explicit (covered by parsetab)
-    inputs += "hi"
-  }
-}
-
-if (true) {
-  if (something) {
-    a = b
-  } else {  # !is_chromeos
-    os_category = current_os
-  }
-  no_blank_here = true
-}
 )a";
 
     gnarl::Error error;

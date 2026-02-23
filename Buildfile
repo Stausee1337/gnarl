@@ -8,6 +8,7 @@ static_library(
         'src/assertions.cc',
         'src/commandline.cc',
         'src/lexer.cc',
+        'src/parser.cc',
     ],
 )
 
