@@ -8,8 +8,8 @@
 namespace gnarl {
 
 enum class TokenKind {
-    EOS,
     Error,
+    EOS,
 
     String,
     Integer,
@@ -72,10 +72,14 @@ struct Token {
         return m_position;
     }
 
+    Span span() const {
+        return Span(position(), Position(nullptr, position().lineno(), position().column() + m_value.length()));
+    }
+
 private:
     friend class Lexer;
 
-    TokenKind m_kind;
+    TokenKind m_kind = TokenKind::Error;
     std::string_view m_value;
     Position m_position;
 };

@@ -14,6 +14,8 @@ struct TokInfo;
 
 class Parser final {
 public:
+
+    static std::unique_ptr<BaseNode> parse(const std::vector<Token>& buffer, Error* error);
     static std::unique_ptr<BaseNode> parse_expression(const std::vector<Token>& buffer, Error* error);
 
 private:
@@ -21,6 +23,8 @@ private:
         : error(error),
         buffer(buffer)
     {}
+
+    std::unique_ptr<BaseNode> parse_file();
 
     std::unique_ptr<BaseNode> parse_statement();
     std::unique_ptr<BaseNode> parse_conditional();
@@ -56,13 +60,15 @@ private:
     bool expect(TokenKind kind, const char* error_msg);
 
     bool is_eof() const {
-        return cursor >= buffer.size();
+        return cursor >= (ssize_t)buffer.size();
     }
 
-    size_t cursor = 0;
+    ssize_t cursor = -1;
 
     Error* error;
     const std::vector<Token>& buffer;
+    std::vector<Token> line_commment_tokens;
+    std::vector<Token> suffix_commment_tokens;
 };
 
 }

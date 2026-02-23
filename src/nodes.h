@@ -35,6 +35,8 @@ public:
     virtual const ConditionalNode* as_conditional() const;
     virtual const UnaryOpNode* as_unary_op() const;
 
+    virtual Span get_span() const = 0;
+
     BaseNode(const BaseNode&) = delete;
     BaseNode& operator=(const BaseNode&) = delete;
 
@@ -59,8 +61,10 @@ public:
     AccessorNode& operator=(const AccessorNode&) = delete;
 
     const AccessorNode* as_accessor() const override;
+    Span get_span() const override;
 
     const Token& base() const { return m_base; }
+    // TODO: maybe use std::variant for this
     const IdentifierNode* member() const { return m_member.get(); }
     const BaseNode* subscript() const { return m_subscript.get(); }
 
@@ -83,6 +87,7 @@ public:
     BinaryOpNode& operator=(const BinaryOpNode&) = delete;
 
     const BinaryOpNode* as_binary_op() const override;
+    Span get_span() const override;
 
     const Token& tok() const { return m_tok; }
     const BaseNode* lhs() const { return m_lhs.get(); }
@@ -101,19 +106,17 @@ public:
         Return, Discard
     };
 
+    BlockNode() = default;
+
     BlockNode(const Token& start)
         : m_start(start)
-    {}
-
-    BlockNode(const Token& start, const Token& end)
-        : m_start(start),
-        m_end(end)
     {}
 
     BlockNode(const BlockNode&) = delete;
     BlockNode& operator=(const BlockNode&) = delete;
 
     const BlockNode* as_block() const override;
+    Span get_span() const override;
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -142,6 +145,7 @@ public:
     BlockCommentNode& operator=(const BlockCommentNode&) = delete;
 
     const BlockCommentNode* as_block_comment() const override;
+    Span get_span() const override;
 
     const Token& tok() const { return m_tok; }
 private:
@@ -160,6 +164,7 @@ public:
     ConditionalNode& operator=(const ConditionalNode&) = delete;
 
     const ConditionalNode* as_conditional() const override;
+    Span get_span() const override;
 
     const Token& tok() const { return m_tok; }
 
@@ -191,6 +196,7 @@ public:
     FunctionCallNode& operator=(const FunctionCallNode&) = delete;
 
     const FunctionCallNode* as_function_call() const override;
+    Span get_span() const override;
 
     const Token& function() const { return m_function; }
 
@@ -211,6 +217,7 @@ public:
     IdentifierNode& operator=(const IdentifierNode&) = delete;
 
     const IdentifierNode* as_identifier() const override;
+    Span get_span() const override;
 
     const Token& tok() const { return m_tok; }
 
@@ -229,6 +236,7 @@ public:
     ListNode& operator=(const ListNode&) = delete;
 
     const ListNode* as_list() const override;
+    Span get_span() const override;
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -258,6 +266,7 @@ public:
     LiteralNode& operator=(const LiteralNode&) = delete;
 
     const LiteralNode* as_literal() const override;
+    Span get_span() const override;
 
     const Token& tok() const { return m_tok; }
 private:
@@ -276,6 +285,7 @@ public:
     UnaryOpNode& operator=(const UnaryOpNode&) = delete;
 
     const UnaryOpNode* as_unary_op() const override;
+    Span get_span() const override;
 
     const Token& tok() const { return m_tok; }
     const BaseNode* operand() const { return m_operand.get(); }

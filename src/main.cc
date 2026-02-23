@@ -7,6 +7,10 @@
 
 int main() {
     auto source = R"a(
+
+if (x == 12) {
+
+}
 )a";
 
     gnarl::Error error;
@@ -29,7 +33,12 @@ int main() {
     // }
     
 
-    gnarl::Parser::parse_expression(token_buffer, &error);
+    auto expr = gnarl::Parser::parse(token_buffer, &error);
+    if (error.has_error()) {
+        std::cerr << error.message() << "\n"; 
+        std::cerr << error.help() << "\n";
+        return 1;
+    }
 
     return 0;
 }

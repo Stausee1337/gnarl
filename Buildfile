@@ -9,6 +9,7 @@ static_library(
         'src/commandline.cc',
         'src/lexer.cc',
         'src/parser.cc',
+        'src/nodes.cc',
     ],
 )
 
