@@ -74,16 +74,69 @@ const TokInfo Parser::expression_table[] = {
     {&Parser::parse_block_comment, nullptr, PREC_NONE}, // BlockComment
 };
 
-std::unique_ptr<BaseNode> Parser::parse_prefix_expression() {
-    const Token& token = current();
+bool is_assignment(const BaseNode* node) {
+    if (!node) return false;
 
-    auto prefix = expression_table[(uint)token.kind()].prefix;
-    if (prefix == nullptr) {
-        *error = Error("Unexpected token '" + std::string(token.value()) + "'");
+    const BinaryOpNode* binary_op = node->as_binary_op();
+    if (!binary_op) return false;
+
+    TokenKind kind = binary_op->tok().kind();
+    return kind == TokenKind::Equal || kind == TokenKind::PlusEquals || kind == TokenKind::MinusEquals;
+}
+
+std::unique_ptr<BaseNode> Parser::parse_statement() {
+    if (matches(TokenKind::If))
+        return parse_conditional();
+    else if (matches(TokenKind::BlockComment))
+        return parse_block_comment();
+
+    std::unique_ptr<BaseNode> expression = parse_expression();
+
+    if (expression->as_function_call() || is_assignment(expression.get()))
+        return expression;
+
+    *error = Error(expression.get(), "Expecting assignment or function call");
+    return std::unique_ptr<BaseNode>();
+}
+
+std::unique_ptr<BaseNode> Parser::parse_conditional() {
+    const Token& token = bump();
+    if (!expect(TokenKind::LParen, "Expected '(' after 'if'"))
+        return std::unique_ptr<BaseNode>();
+
+    std::unique_ptr<BaseNode> condition = parse_expression();
+    if (error->has_error())
+        return std::unique_ptr<BaseNode>();
+    if (is_assignment(condition.get())) {
+        *error = Error(condition.get(), "Assignment not allowed in 'if'");
         return std::unique_ptr<BaseNode>();
     }
 
-    return (this->*(prefix))();
+    if (!expect(TokenKind::RParen, "Expected ')' after condition of 'if'"))
+        return std::unique_ptr<BaseNode>();
+
+    std::unique_ptr<BlockNode> if_branch = parse_block(BlockNode::Mode::Discard);
+    if (error->has_error())
+        return std::unique_ptr<BaseNode>();
+
+    std::unique_ptr<ConditionalNode> conditional = std::make_unique<ConditionalNode>(
+            token, std::move(condition), std::move(if_branch));
+
+    if (matches(TokenKind::Else)) {
+        bump();
+        std::unique_ptr<BaseNode> else_branch;
+
+        if (matches(TokenKind::If))
+            else_branch = parse_conditional();
+        else
+            else_branch = parse_block(BlockNode::Mode::Discard);
+
+        if (error->has_error())
+            return std::unique_ptr<BaseNode>();
+        conditional->set_else_branch(std::move(else_branch));
+    }
+
+    return conditional;
 }
 
 std::unique_ptr<BaseNode> Parser::parse_expression(int min_prec) {
@@ -104,6 +157,18 @@ std::unique_ptr<BaseNode> Parser::parse_expression(int min_prec) {
     }
 
     return lhs;
+}
+
+std::unique_ptr<BaseNode> Parser::parse_prefix_expression() {
+    const Token& token = current();
+
+    auto prefix = expression_table[(uint)token.kind()].prefix;
+    if (prefix == nullptr) {
+        *error = Error(token.position(), "Unexpected token '" + std::string(token.value()) + "'");
+        return std::unique_ptr<BaseNode>();
+    }
+
+    return (this->*(prefix))();
 }
 
 std::unique_ptr<BaseNode> Parser::parse_not() {
@@ -128,7 +193,7 @@ std::unique_ptr<BaseNode> Parser::parse_identifier_or_call() {
     if (!matches(TokenKind::LParen))
         return std::make_unique<IdentifierNode>(token);
 
-    auto list = parse_comma_sperated_list(TokenKind::RParen, false);
+    auto list = parse_comma_seperated_list(TokenKind::RParen, false);
     if (error->has_error())
         return std::unique_ptr<BaseNode>();
 
@@ -153,7 +218,7 @@ std::unique_ptr<BaseNode> Parser::parse_paren() {
 }
 
 std::unique_ptr<BaseNode> Parser::parse_list() {
-    auto list = parse_comma_sperated_list(TokenKind::RBracket, true);
+    auto list = parse_comma_seperated_list(TokenKind::RBracket, true);
     if (error->has_error())
         return std::unique_ptr<BaseNode>();
     return list;
@@ -164,6 +229,10 @@ std::unique_ptr<BaseNode> Parser::parse_block() {
     if (error->has_error())
         return std::unique_ptr<BaseNode>();
     return block;
+}
+
+std::unique_ptr<BaseNode> Parser::parse_block_comment() {
+    return std::make_unique<BlockCommentNode>(bump());
 }
 
 std::unique_ptr<BaseNode> Parser::parse_binary_operator(std::unique_ptr<BaseNode> lhs) {
@@ -236,6 +305,60 @@ std::unique_ptr<BaseNode> Parser::parse_subscript(std::unique_ptr<BaseNode> lhs)
         return std::unique_ptr<BaseNode>();
 
     return std::make_unique<AccessorNode>(base->tok(), std::move(rhs));
+}
+
+std::unique_ptr<BlockNode> Parser::parse_block(BlockNode::Mode node) {
+    std::unique_ptr<BlockNode> block = std::make_unique<BlockNode>(bump());
+    while (!matches(TokenKind::RParen)) {
+        std::unique_ptr<BaseNode> stmt = parse_statement();
+        if (error->has_error())
+            return std::unique_ptr<BlockNode>();
+        block->append(std::move(stmt));
+    }
+    block->set_end(bump());
+
+    return block;
+}
+
+std::unique_ptr<ListNode> Parser::parse_comma_seperated_list(TokenKind end_token, bool allow_trailing_comma) {
+    std::unique_ptr<ListNode> list = std::make_unique<ListNode>(bump());
+
+    bool had_comma = true;
+    while (!matches(end_token)) {
+        if (!had_comma) {
+            *error = Error(current().position(), "Expected comma between items");
+            return std::unique_ptr<ListNode>();
+        }
+
+        std::unique_ptr<BaseNode> expr = parse_expression(PREC_BOOLEAN_OR);
+        if (error->has_error())
+            return std::unique_ptr<ListNode>();
+
+        if (is_eof()) {
+            *error = Error(list.get(), "Unexpected end of file in list");
+            return std::unique_ptr<ListNode>();
+        }
+
+        if (expr->as_block_comment())
+            had_comma = allow_trailing_comma;
+        else
+            had_comma = bump_if(TokenKind::Comma);
+    }
+    list->set_end(bump());
+    if (had_comma && !allow_trailing_comma) {
+        *error = Error(current().position(), "Trailing comma");
+        return std::unique_ptr<ListNode>();
+    }
+
+    list->set_end(bump());
+
+    return list;
+}
+
+
+std::unique_ptr<BaseNode> Parser::parse_expression(const std::vector<Token>& buffer, Error* error) {
+    Parser p(buffer, error);
+    return p.parse_expression();
 }
 
 class StringParser final {

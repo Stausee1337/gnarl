@@ -22,6 +22,7 @@ private:
         buffer(buffer)
     {}
 
+    std::unique_ptr<BaseNode> parse_statement();
     std::unique_ptr<BaseNode> parse_conditional();
 
     std::unique_ptr<BaseNode> parse_expression(int min_prec = 0);
@@ -33,7 +34,6 @@ private:
     std::unique_ptr<BaseNode> parse_paren();
     std::unique_ptr<BaseNode> parse_list();
     std::unique_ptr<BaseNode> parse_block();
-    std::unique_ptr<BlockNode> parse_block(BlockNode::Mode mode);
     std::unique_ptr<BaseNode> parse_block_comment();
 
     std::unique_ptr<BaseNode> parse_assign_operator(std::unique_ptr<BaseNode> lhs);
@@ -41,7 +41,8 @@ private:
     std::unique_ptr<BaseNode> parse_dot(std::unique_ptr<BaseNode> lhs);
     std::unique_ptr<BaseNode> parse_subscript(std::unique_ptr<BaseNode> lhs);
 
-    std::unique_ptr<ListNode> parse_comma_sperated_list(TokenKind end_token, bool allow_trailing_comma);
+    std::unique_ptr<ListNode> parse_comma_seperated_list(TokenKind end_token, bool allow_trailing_comma);
+    std::unique_ptr<BlockNode> parse_block(BlockNode::Mode mode);
 
     static const TokInfo expression_table[];
 
@@ -50,6 +51,7 @@ private:
     }
 
     const Token& bump();
+    bool bump_if(TokenKind kind);
     bool matches(TokenKind kind);
     bool expect(TokenKind kind, const char* error_msg);
 

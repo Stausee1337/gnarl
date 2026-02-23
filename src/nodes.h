@@ -11,6 +11,8 @@ namespace gnarl {
 class AccessorNode;
 class BinaryOpNode;
 class BlockNode;
+class BlockCommentNode;
+class ConditionalNode;
 class FunctionCallNode;
 class IdentifierNode;
 class ListNode;
@@ -25,10 +27,12 @@ public:
     virtual const AccessorNode* as_accessor() const;
     virtual const BinaryOpNode* as_binary_op() const;
     virtual const BlockNode* as_block() const;
+    virtual const BlockCommentNode* as_block_comment() const;
     virtual const FunctionCallNode* as_function_call() const;
     virtual const IdentifierNode* as_identifier() const;
     virtual const ListNode* as_list() const;
     virtual const LiteralNode* as_literal() const;
+    virtual const ConditionalNode* as_conditional() const;
     virtual const UnaryOpNode* as_unary_op() const;
 
     BaseNode(const BaseNode&) = delete;
@@ -97,6 +101,10 @@ public:
         Return, Discard
     };
 
+    BlockNode(const Token& start)
+        : m_start(start)
+    {}
+
     BlockNode(const Token& start, const Token& end)
         : m_start(start),
         m_end(end)
@@ -108,12 +116,67 @@ public:
     const BlockNode* as_block() const override;
 
     const Token& end() const { return m_end; }
+    void set_end(const Token& end) { m_end = end; }
+
     const Token& start() const { return m_start; }
+
+    void append(std::unique_ptr<BaseNode>&& node) {
+        m_stmts.push_back(std::move(node));
+    }
 
 private:
 
     Token m_start;
     Token m_end;
+
+    std::vector<std::unique_ptr<BaseNode>> m_stmts;
+};
+
+class BlockCommentNode final : public BaseNode {
+public:
+    BlockCommentNode(const Token& token)
+        : m_tok(token)
+    { }
+
+    BlockCommentNode(const BlockCommentNode&) = delete;
+    BlockCommentNode& operator=(const BlockCommentNode&) = delete;
+
+    const BlockCommentNode* as_block_comment() const override;
+
+    const Token& tok() const { return m_tok; }
+private:
+
+    Token m_tok;
+};
+
+class ConditionalNode final : public BaseNode {
+public:
+    ConditionalNode(const Token& token, std::unique_ptr<BaseNode>&& condition, std::unique_ptr<BlockNode>&& if_branch)
+        : m_tok(token),
+        m_if_branch(std::move(if_branch))
+    {}
+
+    ConditionalNode(const ConditionalNode&) = delete;
+    ConditionalNode& operator=(const ConditionalNode&) = delete;
+
+    const ConditionalNode* as_conditional() const override;
+
+    const Token& tok() const { return m_tok; }
+
+    const BaseNode* condition() const { return m_condition.get(); }
+    const BlockNode* if_branch() const { return m_if_branch.get(); }
+
+    const BaseNode* else_branch() const { return m_else_branch.get(); }
+    void set_else_branch(std::unique_ptr<BaseNode>&& node) {
+        m_else_branch = std::move(node);
+    }
+
+private:
+
+    Token m_tok;
+    std::unique_ptr<BlockNode> m_condition;
+    std::unique_ptr<BlockNode> m_if_branch;
+    std::unique_ptr<BaseNode> m_else_branch;
 };
 
 class FunctionCallNode final : public BaseNode {
@@ -158,7 +221,9 @@ private:
 
 class ListNode final : public BaseNode {
 public:
-    ListNode() = default;
+    ListNode(const Token& start)
+        : m_start(start)
+    {}
 
     ListNode(const ListNode&) = delete;
     ListNode& operator=(const ListNode&) = delete;
@@ -169,10 +234,9 @@ public:
     void set_end(const Token& end) { m_end = end; }
 
     const Token& start() const { return m_start; }
-    void set_start(const Token& start) { m_end = start; }
 
     void append(std::unique_ptr<BaseNode>&& node) {
-        m_list.push_back(std::move(node));
+        m_items.push_back(std::move(node));
     }
 
 private:
@@ -180,7 +244,7 @@ private:
     Token m_start;
     Token m_end;
 
-    std::vector<std::unique_ptr<BaseNode>> m_list;
+    std::vector<std::unique_ptr<BaseNode>> m_items;
 };
 
 

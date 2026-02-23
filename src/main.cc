@@ -2,6 +2,7 @@
 
 #include "input_file.h"
 #include "lexer.h"
+#include "parser.h"
 
 
 int main() {
@@ -19,13 +20,16 @@ int main() {
         return 1;
     }
 
-    for (const auto& token : token_buffer) {
-        printf("%d:%d: %.*s\n",
-               token.position().lineno(),
-               token.position().column(),
-               (int)token.value().size(),
-               token.value().data());
-    }
+    // for (const auto& token : token_buffer) {
+    //     printf("%d:%d: %.*s\n",
+    //            token.position().lineno(),
+    //            token.position().column(),
+    //            (int)token.value().size(),
+    //            token.value().data());
+    // }
+    
+
+    gnarl::Parser::parse_expression(token_buffer, &error);
 
     return 0;
 }
