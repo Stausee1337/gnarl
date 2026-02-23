@@ -5,6 +5,7 @@
 
 #include "lexer.h"
 #include "assertions.h"
+#include "token.h"
 
 namespace gnarl {
 
@@ -12,21 +13,24 @@ void Lexer::lex(std::vector<Token>& buffer) {
     bump();
 
     while (true) {
-        Token tok = this->lex_one_token();
+        Token tok = lex_one_token();
         buffer.push_back(tok);
 
-        if (tok.m_kind == TokenKind::EOS)
+        if (tok.kind() == TokenKind::EOS || tok.kind() == TokenKind::Error)
             break;
+        previous = tok;
     }
 }
 
 Token Lexer::lex_one_token() {
     eat_whitespace();
-    if (is_eos())
+    tok_start = position();
+    // printf("Is eof: %d\n", is_eof());
+
+    if (is_eof())
         return make_token(TokenKind::EOS);
 
     char c = current();
-    tok_start = position();
 
     if (c == '#')
         return lex_comment();
@@ -43,7 +47,7 @@ Token Lexer::lex_one_token() {
     if (ispunct(c))
         return lex_punct();
 
-    *error = Error(make_position(), "I have no idea what this is");
+    *error = Error(current_position(), "Invalid token", "I have no idea what this is");
     return make_token(TokenKind::Error);
 }
 
@@ -53,8 +57,32 @@ Token Lexer::lex_comment() {
     do {
         bump();
         c = current();
-    } while (c != '\n' || c == '\r');
-    return make_token(TokenKind::Comment);
+    } while (c != '\n' && c != '\r' && !is_eof());
+
+    TokenKind kind = TokenKind::SuffixComment;
+
+    // Adapted from gn/tokenizer.cc - Detection of Line and BlockComment
+    if (at_start_of_line(tok_start) && 
+        (!previous.has_value()
+            || previous->kind() != TokenKind::SuffixComment
+            || previous->position().lineno() + 1 != lineno
+            || previous->position().column() != column())) {
+        kind = TokenKind::LineComment;
+        if (!is_eof())
+            bump();
+
+        char c = current();
+        while (isspace(c)) {
+            if (c == '\r' || c == '\n') {
+                kind = TokenKind::BlockComment;
+                break;
+            }
+            bump();
+            c = current();
+        }
+    }
+
+    return make_token(kind);
 }
 
 Token Lexer::lex_identifier_or_keyword() {
@@ -172,14 +200,21 @@ Token Lexer::lex_string_literal() {
         if (c == '\\')
             continue;
 
-    } while (c != end && c != '\n' && c != '\r');
+    } while (c != end && c != '\n' && c != '\r' && !is_eof());
 
-    if (c != end) {
-        *error = Error(make_position(), "Newline in string constant");
-        return make_token(TokenKind::Error);
+    if (c == end) {
+        bump();
+        return make_token(TokenKind::String);
     }
 
-    return make_token(TokenKind::String);
+    if (is_eof())
+        *error = Error(token_span(),
+                      "Unterminated string literal",
+                      "Don't leave me hanging like this!");
+    else
+        *error = Error(token_span(), "Newline in string constant");
+    bump();
+    return make_token(TokenKind::Error);
 }
 
 Token Lexer::lex_number_literal() {
@@ -197,12 +232,29 @@ Token Lexer::lex_number_literal() {
 }
 
 Token Lexer::make_token(TokenKind kind) const {
-    std::string_view data(source.data() + tok_start, position() - tok_start);
-    return Token(kind, data, make_position());
+    std::string_view data(source.data() + tok_start + 1, position() - tok_start);
+    return Token(kind, data, current_position());
 }
 
-Position Lexer::make_position() const {
-    return Position(&input_file, lineno, position() - bol);
+Position Lexer::current_position() const {
+    return Position(&input_file, lineno, column());
+}
+
+Span Lexer::token_span() const {
+    Position token_start(&input_file, lineno, tok_start - bol);
+    return Span(token_start, current_position());
+}
+
+bool Lexer::at_start_of_line(size_t offset) const {
+    DCHECK(offset <= source.length());
+    while (offset > 0) {
+        char c = source[--offset];
+        if (c == '\n')
+            return true;
+        if (c != ' ')
+            return false;
+    }
+    return false;
 }
 
 void Lexer::eat_whitespace() {
@@ -212,25 +264,26 @@ void Lexer::eat_whitespace() {
             if (c == '\r' && next() == '\n')
                 bump();
             lineno++;
-            bol = position();
+            bol = position() + 1;
         }
         bump();
+        c = current();
     }
 }
 
-bool Lexer::is_eos() const {
-    return m_position > source.length();
+bool Lexer::is_eof() const {
+    return m_position >= source.length();
 }
 
 char Lexer::next() const {
-    if (m_position > source.length()) {
+    if (m_position >= source.length()) {
         return 0;
     }
     return source[m_position + 1];
 }
 
 void Lexer::bump() {
-    if (m_position > source.length()) {
+    if (m_position >= source.length()) {
         m_current = 0;
         return;
     }

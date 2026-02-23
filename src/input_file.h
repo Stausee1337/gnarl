@@ -7,6 +7,10 @@ namespace gnarl {
 
 class InputFile {
 public:
+    InputFile(std::string source)
+        : m_source(source)
+    {}
+
     InputFile(const InputFile&) = delete;
     const InputFile& operator=(const InputFile&) = delete;
 

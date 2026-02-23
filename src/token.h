@@ -20,7 +20,6 @@ enum class TokenKind {
     True,
     False,
 
-
     Equal,
     Plus,
     Minus,
@@ -47,8 +46,9 @@ enum class TokenKind {
 
     UnknownOp,
 
-    Comment,
-
+    LineComment,
+    BlockComment,
+    SuffixComment,
 };
 
 struct Token {
@@ -64,6 +64,10 @@ struct Token {
 
     const std::string_view& value() const {
         return m_value;
+    }
+
+    const Position& position() const {
+        return m_position;
     }
 
 private:

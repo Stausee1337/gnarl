@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "assertions.h"
 #include "position.h"
 
 namespace gnarl {
@@ -24,6 +25,10 @@ public:
           std::string message,
           std::string help = std::string());
 
+    Error(const Span& span,
+          std::string message,
+          std::string help = std::string());
+
     Error(const Error&);
     Error& operator=(const Error&);
 
@@ -36,7 +41,15 @@ public:
     const std::string& message() const { return data->message; }
     const std::string& help() const { return data->help; }
 
-    void append_suberror(const Error&);
+    void append_span(const Span& span) {
+        DCHECK(has_error());
+        data->spans.push_back(span);
+    }
+
+    void append_suberror(const Error& suberror) {
+        DCHECK(has_error());
+        data->suberrors.push_back(suberror);
+    }
 
     // void print_to_stdout() const;
 
@@ -52,6 +65,7 @@ private:
         std::string help;
 
         std::vector<Error> suberrors;
+        std::vector<Span> spans;
     };
 
     std::unique_ptr<Data> data;

@@ -14,6 +14,7 @@ namespace assertions {
          (call);                        \
     } while (0)
 
+// TODO: only activate if debug build
 #define DCHECK(condition) \
     _IMPL_CHECK(::assertions::DCheck(#condition), condition)
 

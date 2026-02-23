@@ -7,8 +7,8 @@
 #include "input_file.h"
 
 namespace gnarl {
-class InputFile;
 
+class InputFile;
 
 struct Position {
 
@@ -36,6 +36,35 @@ private:
     const InputFile* m_file = nullptr;
     uint32_t m_lineno;
     uint32_t m_column;
+};
+
+struct Span {
+    Span() = default;
+
+    Span(const Position& start, const Position& end)
+        : m_file(start.file() ? start.file() : end.file()),
+        m_start_lineno(start.lineno()),
+        m_start_column(start.column()),
+        m_end_lineno(end.lineno()),
+        m_end_column(end.column())
+    {}
+
+    Position start() const {
+        return Position(m_file, m_start_lineno, m_start_column);
+    }
+
+    Position end() const {
+        return Position(m_file, m_end_lineno, m_end_column);
+    }
+
+private:
+    const InputFile* m_file = nullptr;
+    uint32_t m_start_lineno;
+    uint32_t m_start_column;
+
+    uint32_t m_end_lineno;
+    uint32_t m_end_column;
+
 };
 
 }

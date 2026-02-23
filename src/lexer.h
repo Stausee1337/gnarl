@@ -2,6 +2,7 @@
 #ifndef GNARL_LEXER_H_
 #define GNARL_LEXER_H_
 
+#include <optional>
 #include <stdint.h>
 #include <limits>
 #include <string_view>
@@ -36,10 +37,14 @@ private:
     Token lex_identifier_or_keyword();
 
     Token make_token(TokenKind kind) const;
-    Position make_position() const;
+
+    uint32_t column() const { return position() - bol; }
+    Position current_position() const;
+    Span token_span() const;
+    bool at_start_of_line(size_t offset) const;
 
     void bump();
-    bool is_eos() const;
+    bool is_eof() const;
     char next() const;
 
     size_t position() const { return m_position - 1; }
@@ -48,13 +53,15 @@ private:
     char m_current = 0;
 
     uint32_t lineno = 1;
-    size_t bol = -1;
-    size_t tok_start;
+    size_t bol = 0;
+    size_t tok_start = 0;
     size_t m_position = 0;
 
     Error* error;
     std::string_view source;
     const InputFile& input_file;
+
+    std::optional<Token> previous;
 };
 
 }
