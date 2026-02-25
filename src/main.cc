@@ -3,6 +3,7 @@
 #include "input_file.h"
 #include "lexer.h"
 #include "parser.h"
+#include "scope.h"
 
 
 int main() {
@@ -39,6 +40,10 @@ if (x == 12) {
         std::cerr << error.help() << "\n";
         return 1;
     }
+
+    std::unique_ptr<gnarl::Scope> scope = std::make_unique<gnarl::Scope>();
+
+    gnarl::Value v = expr->evaluate(scope.get(), &error);
 
     return 0;
 }

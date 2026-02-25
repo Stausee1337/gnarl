@@ -8,6 +8,10 @@
 
 namespace gnarl {
 
+class Error;
+class Scope;
+class Value;
+
 class AccessorNode;
 class BinaryOpNode;
 class BlockNode;
@@ -36,6 +40,8 @@ public:
     virtual const UnaryOpNode* as_unary_op() const;
 
     virtual Span get_span() const = 0;
+    virtual Value evaluate(Scope* scope, Error* error) = 0;
+    virtual void evaluate_set(Scope* scope, Value value, Error* error);
 
     BaseNode(const BaseNode&) = delete;
     BaseNode& operator=(const BaseNode&) = delete;
@@ -61,7 +67,10 @@ public:
     AccessorNode& operator=(const AccessorNode&) = delete;
 
     const AccessorNode* as_accessor() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
+    void evaluate_set(Scope* scope, Value value, Error* error) override;
 
     const Token& base() const { return m_base; }
     // TODO: maybe use std::variant for this
@@ -87,7 +96,9 @@ public:
     BinaryOpNode& operator=(const BinaryOpNode&) = delete;
 
     const BinaryOpNode* as_binary_op() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& tok() const { return m_tok; }
     const BaseNode* lhs() const { return m_lhs.get(); }
@@ -116,7 +127,9 @@ public:
     BlockNode& operator=(const BlockNode&) = delete;
 
     const BlockNode* as_block() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -145,7 +158,9 @@ public:
     BlockCommentNode& operator=(const BlockCommentNode&) = delete;
 
     const BlockCommentNode* as_block_comment() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& tok() const { return m_tok; }
 private:
@@ -164,7 +179,9 @@ public:
     ConditionalNode& operator=(const ConditionalNode&) = delete;
 
     const ConditionalNode* as_conditional() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& tok() const { return m_tok; }
 
@@ -196,7 +213,9 @@ public:
     FunctionCallNode& operator=(const FunctionCallNode&) = delete;
 
     const FunctionCallNode* as_function_call() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& function() const { return m_function; }
 
@@ -217,7 +236,10 @@ public:
     IdentifierNode& operator=(const IdentifierNode&) = delete;
 
     const IdentifierNode* as_identifier() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
+    void evaluate_set(Scope* scope, Value value, Error* error) override;
 
     const Token& tok() const { return m_tok; }
 
@@ -236,7 +258,9 @@ public:
     ListNode& operator=(const ListNode&) = delete;
 
     const ListNode* as_list() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -266,7 +290,9 @@ public:
     LiteralNode& operator=(const LiteralNode&) = delete;
 
     const LiteralNode* as_literal() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& tok() const { return m_tok; }
 private:
@@ -285,7 +311,9 @@ public:
     UnaryOpNode& operator=(const UnaryOpNode&) = delete;
 
     const UnaryOpNode* as_unary_op() const override;
+
     Span get_span() const override;
+    Value evaluate(Scope* scope, Error* error) override;
 
     const Token& tok() const { return m_tok; }
     const BaseNode* operand() const { return m_operand.get(); }
