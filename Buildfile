@@ -10,6 +10,10 @@ static_library(
         'src/lexer.cc',
         'src/parser.cc',
         'src/nodes.cc',
+        'src/value.cc',
+        'src/scope.cc',
+        'src/evaluate.cc',
+        'src/literals.cc',
     ],
 )
 

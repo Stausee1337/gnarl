@@ -12,9 +12,17 @@ namespace gnarl {
 class Scope final {
 public:
     Scope() = default;
+    Scope(Scope* parent);
 
-    const Value* get_value(std::string_view name, bool counts_as_used = true);
+    Scope(const Scope&) = default;
+    Scope& operator=(const Scope&) = default;
+
+    const Value* get_value(std::string_view name, bool counts_as_used = true) const;
+    Value* get_value_mutable(std::string_view name);
+
     void set_value(std::string_view name, Value&& value);
+
+    bool operator==(const Scope& other) const;
 
 private:
     struct ValueInfo {

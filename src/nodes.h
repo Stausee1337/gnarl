@@ -40,8 +40,8 @@ public:
     virtual const UnaryOpNode* as_unary_op() const;
 
     virtual Span get_span() const = 0;
-    virtual Value evaluate(Scope* scope, Error* error) = 0;
-    virtual void evaluate_set(Scope* scope, Value value, Error* error);
+    virtual Value evaluate(Scope* scope, Error* error) const = 0;
+    virtual void evaluate_set(Scope* scope, Error* error, Value value);
 
     BaseNode(const BaseNode&) = delete;
     BaseNode& operator=(const BaseNode&) = delete;
@@ -69,8 +69,8 @@ public:
     const AccessorNode* as_accessor() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
-    void evaluate_set(Scope* scope, Value value, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
+    void evaluate_set(Scope* scope, Error* error, Value value) override;
 
     const Token& base() const { return m_base; }
     // TODO: maybe use std::variant for this
@@ -98,7 +98,7 @@ public:
     const BinaryOpNode* as_binary_op() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& tok() const { return m_tok; }
     const BaseNode* lhs() const { return m_lhs.get(); }
@@ -117,10 +117,13 @@ public:
         Return, Discard
     };
 
-    BlockNode() = default;
+    BlockNode(Mode mode)
+        : m_mode(mode)
+    {}
 
-    BlockNode(const Token& start)
-        : m_start(start)
+    BlockNode(Mode mode, const Token& start)
+        : m_mode(mode),
+        m_start(start)
     {}
 
     BlockNode(const BlockNode&) = delete;
@@ -129,7 +132,10 @@ public:
     const BlockNode* as_block() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
+    void evaluate_in_scope(Scope* scope, Error* error) const;
+
+    Mode mode() const { return m_mode; }
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -141,6 +147,7 @@ public:
     }
 
 private:
+    Mode m_mode;
 
     Token m_start;
     Token m_end;
@@ -160,7 +167,7 @@ public:
     const BlockCommentNode* as_block_comment() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& tok() const { return m_tok; }
 private:
@@ -181,7 +188,7 @@ public:
     const ConditionalNode* as_conditional() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& tok() const { return m_tok; }
 
@@ -215,7 +222,7 @@ public:
     const FunctionCallNode* as_function_call() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& function() const { return m_function; }
 
@@ -238,8 +245,8 @@ public:
     const IdentifierNode* as_identifier() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
-    void evaluate_set(Scope* scope, Value value, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
+    void evaluate_set(Scope* scope, Error* error, Value value) override;
 
     const Token& tok() const { return m_tok; }
 
@@ -260,7 +267,7 @@ public:
     const ListNode* as_list() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -292,7 +299,7 @@ public:
     const LiteralNode* as_literal() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& tok() const { return m_tok; }
 private:
@@ -313,7 +320,7 @@ public:
     const UnaryOpNode* as_unary_op() const override;
 
     Span get_span() const override;
-    Value evaluate(Scope* scope, Error* error) override;
+    Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& tok() const { return m_tok; }
     const BaseNode* operand() const { return m_operand.get(); }

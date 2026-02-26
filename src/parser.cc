@@ -75,7 +75,7 @@ const TokInfo Parser::expression_table[] = {
 };
 
 std::unique_ptr<BaseNode> Parser::parse_file() {
-    std::unique_ptr<BlockNode> block = std::make_unique<BlockNode>();
+    std::unique_ptr<BlockNode> block = std::make_unique<BlockNode>(BlockNode::Mode::Discard);
 
     while (!is_eof()) {
         std::unique_ptr<BaseNode> stmt = parse_statement();
@@ -336,8 +336,8 @@ std::unique_ptr<BaseNode> Parser::parse_subscript(std::unique_ptr<BaseNode> lhs)
     return std::make_unique<AccessorNode>(base->tok(), std::move(rhs));
 }
 
-std::unique_ptr<BlockNode> Parser::parse_block(BlockNode::Mode node) {
-    std::unique_ptr<BlockNode> block = std::make_unique<BlockNode>(bump());
+std::unique_ptr<BlockNode> Parser::parse_block(BlockNode::Mode mode) {
+    std::unique_ptr<BlockNode> block = std::make_unique<BlockNode>(mode, bump());
     while (!matches(TokenKind::RCurly)) {
 
         std::unique_ptr<BaseNode> stmt = parse_statement();
@@ -439,81 +439,5 @@ std::unique_ptr<BaseNode> Parser::parse_expression(const std::vector<Token>& buf
     return p.parse_expression();
 }
 
-class StringParser final {
-public:
-    enum class QuoteKind {
-        Single,
-        Double,
-    };
-
-    StringParser(QuoteKind quote_kind)
-        : quote_kind_(quote_kind)
-    {}
-
-    void feed(char c);
-    bool is_ended() const { return state_ == State::Ended; }
-
-private:
-    void normal(char c);
-    void escape(char c);
-
-    enum class State {
-        Normal,
-        Escape,
-        Ended,
-    };
-
-    QuoteKind quote_kind_;
-    State state_ = State::Normal;
-    std::string buffer;
-};
-
-void StringParser::feed(char c) {
-    switch (state_) {
-        case State::Normal:
-            normal(c);
-        case State::Escape:
-            escape(c);
-        case State::Ended:
-            ABORT("call to feed in Ended state");
-    }
-}
-
-void StringParser::normal(char c) {
-    switch (c) {
-        case '\\':
-            state_ = State::Escape;
-            break;
-        case '\n':
-        case '\r':
-            state_ = State::Ended;
-            // *err = Err("String literal is unclosed");
-            break;
-        case '\'':
-            if (quote_kind_ == QuoteKind::Single)
-                state_ = State::Ended;
-            break;
-        case '"':
-            if (quote_kind_ == QuoteKind::Double)
-                state_ = State::Ended;
-            break;
-        default:
-            buffer.push_back(c);
-    }
-}
-
-void StringParser::escape(char c) {
-    state_ = State::Normal;
-    switch (c) {
-        case '\\': buffer.push_back('\\');
-        case '\'':
-            if (quote_kind_ == QuoteKind::Single)
-                buffer.push_back('\'');
-        case '"':
-            if (quote_kind_ == QuoteKind::Double)
-                buffer.push_back('"');
-    }
-    buffer.push_back(c);
-}
 
 }

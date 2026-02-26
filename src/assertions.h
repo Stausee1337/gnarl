@@ -19,7 +19,7 @@ namespace assertions {
     _IMPL_CHECK(::assertions::DCheck(#condition), condition)
 
 #define ABORT(message) \
-    ::assertions::DCheck(message)
+    ::assertions::Abort(message)
 
 struct Location {
 
