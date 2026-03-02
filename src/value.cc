@@ -1,7 +1,9 @@
 
+#include <memory>
+#include <sstream>
+#include "error.h"
 #include "value.h"
 #include "scope.h"
-#include <memory>
 
 namespace gnarl {
 
@@ -33,11 +35,11 @@ bool Value::operator==(const Value& other) const {
         case Kind::None:
             return true;
         case Kind::Boolean:
-            return m_boolean == other.m_boolean;
+            return as_boolean() == other.as_boolean();
         case Kind::Integer:
-            return m_integer == other.m_integer;
+            return as_integer() == other.as_integer();
         case Kind::String:
-            return m_string == other.m_string;
+            return as_string() == other.as_string();
         case Kind::List:
         {
             if (m_list.size() != other.m_list.size())
@@ -45,25 +47,18 @@ bool Value::operator==(const Value& other) const {
             return std::equal(m_list.begin(), m_list.end(), other.m_list.begin());
         }
         case Kind::Scope:
-            return *m_scope == *other.m_scope;
+            return m_scope->equals_current_values(other.as_scope());
     }
 }
 
-const char* Value::type_name(const Value& value) {
-    switch (value.m_kind) {
-        case Kind::None:
-            return "void";
-        case Kind::Boolean:
-            return "boolean";
-        case Kind::Integer:
-            return "integer";
-        case Kind::String:
-            return "string";
-        case Kind::List:
-            return "list";
-        case Kind::Scope:
-            return "scope";
-    }
+bool Value::typeck(Kind kind, Error* error, Span span) const {
+    if (m_kind == kind)
+        return true;
+    *error = Error(
+        span,
+        "This is not a " + std::string(type_name(kind)),
+        "Instead I see a " + std::string(type_name(*this)) + " = " + display());
+    return false;
 }
 
 void Value::dispose() {
@@ -131,6 +126,98 @@ Value& Value::move(Value&& other) {
     m_kind = other.m_kind;
     other.m_kind = Value::Kind::None;
     return *this;
+}
+
+std::string recursive_display(const std::vector<Value>& list) {
+    std::string s;
+    s.push_back('[');
+
+    for (auto iterator = list.begin(); iterator != list.end(); ++iterator) {
+        if (iterator != list.begin())
+            s += ", ";
+        s += iterator->display();
+    }
+    s.push_back(']');
+
+    return s;
+}
+
+std::string recursive_display(const Scope& scope) {
+    auto values = scope.get_values();
+    if (values.size() == 0)
+        return "{ }";
+
+    std::stringstream stream;
+    stream << "{\n";
+
+    for (auto iterator = values.begin(); iterator != values.end(); ++iterator) {
+        stream << iterator->first;
+        stream << " = ";
+        stream << iterator->second.display();
+        stream << "\n";
+    }
+
+    stream << '}';
+
+    return stream.str();
+}
+
+std::string quoted(const std::string& string) {
+    std::string result;
+    result.push_back('"');
+
+    for (char c : string) {
+        if (c == '$' || c == '\\' || c == '"')
+            result.push_back('\\');
+        result.push_back(c);
+    }
+
+    result.push_back('"');
+    return result;
+}
+
+std::string Value::display() const {
+    switch (m_kind) {
+        case Kind::None:
+            return "<void>";
+        case Kind::Boolean:
+            return m_boolean ? "true" : "false";
+        case Kind::Integer:
+            return std::to_string(m_integer);
+        case Kind::String:
+            return quoted(m_string);
+        case Kind::List:
+            return recursive_display(m_list);
+        case Kind::Scope:
+            return recursive_display(*m_scope.get());
+    }
+}
+
+std::string Value::stringify() const {
+    if (m_kind == Kind::String)
+        return as_string();
+    return display();
+}
+
+const char* Value::type_name(const Value& value) {
+    return type_name(value.m_kind);
+}
+
+const char* Value::type_name(Kind kind) {
+    switch (kind) {
+        case Kind::None:
+            return "none";
+        case Kind::Boolean:
+            return "boolean";
+        case Kind::Integer:
+            return "integer";
+        case Kind::String:
+            return "string";
+        case Kind::List:
+            return "list";
+        case Kind::Scope:
+            return "scope";
+    }
 }
 
 }

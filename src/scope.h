@@ -3,7 +3,7 @@
 #define GNARL_SCOPE_H_
 
 #include <string_view>
-#include <unordered_map>
+#include <map>
 
 #include "value.h"
 
@@ -11,6 +11,8 @@ namespace gnarl {
 
 class Scope final {
 public:
+    using ValueMap = std::map<std::string_view, Value>;
+
     Scope() = default;
     Scope(Scope* parent);
 
@@ -22,15 +24,19 @@ public:
 
     void set_value(std::string_view name, Value&& value);
 
-    bool operator==(const Scope& other) const;
+    ValueMap get_values() const;
+
+    bool equals_current_values(const Scope& other) const;
 
 private:
     struct ValueInfo {
         Value value;
         bool used;
     };
+    using ValueInfoMap = std::map<std::string_view, ValueInfo>;
 
-    std::unordered_map<std::string_view, ValueInfo> m_values;
+    const Scope* m_parent;
+    ValueInfoMap m_values;
 };
 
 }

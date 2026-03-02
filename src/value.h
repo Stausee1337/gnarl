@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "position.h"
+#include "assertions.h"
 
 namespace gnarl {
 
@@ -41,29 +42,65 @@ public:
     Value(Value&&);
     Value& operator=(Value&&);
 
-    const Span* origin() const;
-    void set_origin(const Span&); 
+    const Span* origin() const {
+        if (!m_origin.has_value())
+            return nullptr;
+        return &m_origin.value();
+    }
+    void set_origin(const Span& span) {
+        m_origin = span;
+    }
 
     Kind kind() const { return m_kind; }
 
-    bool as_boolean() const { return m_boolean; }
-    int64_t as_integer() const { return m_integer; }
-    const std::string& as_string() const { return m_string; }
+    bool as_boolean() const {
+        DCHECK(m_kind == Kind::Boolean);
+        return m_boolean;
+    }
 
-    std::vector<Value>& as_list() { return m_list; }
-    const std::vector<Value>& as_list() const{ return m_list; }
+    int64_t as_integer() const {
+        DCHECK(m_kind == Kind::Integer);
+        return m_integer;
+    }
 
-    Scope& as_scope() { return *m_scope; }
-    const Scope& as_scope() const { return *m_scope; }
+    const std::string& as_string() const {
+        DCHECK(m_kind == Kind::String);
+        return m_string;
+    }
 
-    bool typeck(Kind kind, Error* error, Span position = Span());
-    std::string display() const;
+
+    std::vector<Value>& as_list() {
+        DCHECK(m_kind == Kind::List);
+        return m_list;
+    }
+
+    const std::vector<Value>& as_list() const{
+        DCHECK(m_kind == Kind::List);
+        return m_list;
+    }
+
+
+    Scope& as_scope() {
+        DCHECK(m_kind == Kind::Scope);
+        return *m_scope;
+    }
+
+    const Scope& as_scope() const {
+        DCHECK(m_kind == Kind::Scope);
+        return *m_scope;
+    }
+
+
+    [[nodiscard]] bool typeck(Kind kind, Error* error, Span position = Span()) const;
+    [[nodiscard]] std::string display() const;
+    [[nodiscard]] std::string stringify() const;
 
     bool operator==(const Value& other) const;
     bool operator!=(const Value& other) const { return !(*this == other); }
 
 
     static const char* type_name(const Value&);
+    static const char* type_name(Kind);
 
 private:
     void dispose();

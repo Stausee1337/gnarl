@@ -38,8 +38,15 @@ Token Lexer::lex_one_token() {
     if ((c >= '0' && c <= '9') || c == '-')
         return lex_number_literal();
 
-    if (c == '"' || c == '\'')
+    if (c == '"')
         return lex_string_literal();
+
+    if (c == '\'') {
+        *error = Error(current_position(),
+                       "Invalid token",
+                       "Strings are delimited by \" characters, not apostrophes");
+        return make_token(TokenKind::Error);
+    }
 
     if (isalpha(c) || c == '_')
         return lex_identifier_or_keyword();
@@ -192,7 +199,6 @@ Token Lexer::lex_punct() {
 
 Token Lexer::lex_string_literal() {
     char c = current();
-    char end = c;
 
     do {
         bump();
@@ -201,9 +207,9 @@ Token Lexer::lex_string_literal() {
         if (c == '\\')
             continue;
 
-    } while (c != end && c != '\n' && c != '\r' && !is_eof());
+    } while (c != '"' && c != '\n' && c != '\r' && !is_eof());
 
-    if (c == end) {
+    if (c == '"') {
         bump();
         return make_token(TokenKind::String);
     }
