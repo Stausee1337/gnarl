@@ -35,7 +35,7 @@ private:
     };
     using ValueInfoMap = std::map<std::string_view, ValueInfo>;
 
-    const Scope* m_parent;
+    const Scope* m_parent = nullptr;
     ValueInfoMap m_values;
 };
 
