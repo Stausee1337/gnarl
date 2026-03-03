@@ -8,8 +8,7 @@
 
 int main() {
     auto source = R"a(
-# x = "Hello, World $a"
-x = { a = { b = 42 } }
+x = ["apple", "pear", "ivy"] - ["pear"]
 )a";
 
     gnarl::Error error;

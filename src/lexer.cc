@@ -35,7 +35,7 @@ Token Lexer::lex_one_token() {
     if (c == '#')
         return lex_comment();
 
-    if ((c >= '0' && c <= '9') || c == '-')
+    if (isdigit(c) || (c == '-' && isdigit(next())))
         return lex_number_literal();
 
     if (c == '"')

@@ -226,6 +226,39 @@ bool evaluate_integer_comparisson(Error* error, TokenKind op, const Value& lhs_v
     }
 }
 
+void remove_matches_from_list(std::vector<Value>& list, const Value& to_remove, Error* error) {
+    switch (to_remove.kind()) {
+        case Value::Kind::Boolean:
+        case Value::Kind::Integer:
+        case Value::Kind::String:
+        case Value::Kind::Scope:
+        {
+            std::vector<Value>::const_iterator iter = std::find(list.begin(), list.end(), to_remove);
+            if (iter == list.end()) {
+                *error = Error(
+                    *to_remove.origin(),
+                    "Item not found",
+                    "You were trying to remove " + to_remove.display() + " but it wasn't there"
+                );
+                return;
+            }
+            list.erase(iter);
+        }
+        break;
+        case Value::Kind::List:
+        {
+            for (const auto& v : to_remove.as_list()) {
+                remove_matches_from_list(list, v, error);
+                if (error->has_error())
+                    break;
+            }
+        }
+        break;
+        case Value::Kind::None:
+            break;
+    }
+}
+
 enum Arithmetic {
     ATH_PLUS,
     ATH_MINUS,
@@ -273,31 +306,22 @@ Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Val
             return lhs_value.as_string() + rhs_value.as_string();
         case Value::Kind::List:
         {
-            std::vector<Value> result;
-            const std::vector<Value>& lhs = lhs_value.as_list();
-            const std::vector<Value>& rhs = rhs_value.as_list();
-
-
             if constexpr (ATH == ATH_PLUS) {
-                for (const auto& value : lhs)
+                std::vector<Value> result;
+                for (const auto& value : lhs_value.as_list())
                     result.push_back(std::move(value));
-                for (const auto& value : rhs)
+                for (const auto& value : rhs_value.as_list())
                     result.push_back(std::move(value));
-            } else {
-                for (const auto& needle : rhs) {
-                    std::vector<Value>::const_iterator iter = std::find(lhs.begin(), lhs.end(), needle);
-                    if (iter == lhs.end()) {
-                        *error = Error(
-                            *needle.origin(),
-                            "Item not found",
-                            "You were trying to remove " + needle.display() + " but it wasn't there"
-                        );
-                        return Value();
-                    }
-                }
+                return Value(std::move(result));
             }
 
-            return Value(std::move(result));
+            Value mutable_copy(lhs_value);
+
+            remove_matches_from_list(mutable_copy.as_list(), rhs_value, error);
+            if (error->has_error())
+                return Value();
+
+            return mutable_copy;
         }
         break;
         default:
