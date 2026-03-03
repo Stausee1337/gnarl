@@ -8,10 +8,8 @@
 
 int main() {
     auto source = R"a(
-
-if (x == 12) {
-
-}
+a = 69
+x = "Hello, World $0x41"
 )a";
 
     gnarl::Error error;
@@ -44,6 +42,13 @@ if (x == 12) {
     std::unique_ptr<gnarl::Scope> scope = std::make_unique<gnarl::Scope>();
 
     gnarl::Value v = expr->evaluate(scope.get(), &error);
+    if (error.has_error()) {
+        std::cerr << error.message() << "\n"; 
+        std::cerr << error.help() << "\n";
+        return 1;
+    }
+
+    std::cout << scope->get_value("x")->stringify() << "\n";
 
     return 0;
 }

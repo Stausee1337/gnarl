@@ -204,8 +204,10 @@ Token Lexer::lex_string_literal() {
         bump();
         c = current();
 
-        if (c == '\\')
+        if (c == '\\') {
+            bump();
             continue;
+        }
 
     } while (c != '"' && c != '\n' && c != '\r' && !is_eof());
 

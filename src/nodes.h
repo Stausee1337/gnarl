@@ -136,6 +136,9 @@ public:
     void evaluate_in_scope(Scope* scope, Error* error) const;
 
     Mode mode() const { return m_mode; }
+    const std::vector<std::unique_ptr<BaseNode>>& stmts() const {
+        return m_stmts;
+    }
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -225,12 +228,14 @@ public:
     Value evaluate(Scope* scope, Error* error) const override;
 
     const Token& function() const { return m_function; }
+    const ListNode* args() const { return m_args.get(); }
+    const BlockNode* block() const { return m_block.get(); }
 
 private:
 
     Token m_function;
-    std::unique_ptr<ListNode>&& m_args;
-    std::unique_ptr<BlockNode>&& m_block;
+    std::unique_ptr<ListNode> m_args;
+    std::unique_ptr<BlockNode> m_block;
 };
 
 class IdentifierNode final : public BaseNode {
