@@ -17,9 +17,9 @@ std::string expand_string_literal(const Token& token, const Scope* scope, Error*
 Value LiteralNode::evaluate(Scope* scope, Error* error) const {
     switch (m_tok.kind()) {
         case TokenKind::True:
-            return true;
+            return Value(this, true);
         case TokenKind::False:
-            return false;
+            return Value(this, false);
         case TokenKind::Integer:
         {
             const std::string_view& value = m_tok.value();
@@ -35,14 +35,15 @@ Value LiteralNode::evaluate(Scope* scope, Error* error) const {
                 *error = Error(get_span(), "This doesn't look like an integer");
                 return Value();
             }
-            return result;
+            return Value(this, result);
         }
         case TokenKind::String:
         {
             std::string strval = expand_string_literal(m_tok, scope, error);
             if (error->has_error())
                 return Value();
-            return Value(std::move(strval));
+            Value v(this, std::move(strval));
+            return v;
         }
         default:
             ABORT("invalid token kind in LiteralNode");

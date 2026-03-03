@@ -174,12 +174,12 @@ void generic_accessor(CONTEXT,
     if (is_subscript)
         *error = Error(
             accessor.base().span(),
-            "Expecting either a list or a scope for a subscript, got " + std::string(Value::type_name(value))
+            "Expecting either a list or a scope for a subscript, got " + std::string(Value::type_name(*value))
         );
     else
         *error = Error(
             accessor.base().span(),
-            "Expecting a scope for named access, got " + std::string(Value::type_name(value))
+            "Expecting a scope for named access, got " + std::string(Value::type_name(*value))
         );
     return;
 }
@@ -189,7 +189,9 @@ Value AccessorNode::evaluate(CONTEXT) const {
     generic_accessor<MUT_IMMUTABLE>(scope, error, *this, &result);
     if (error->has_error())
         return Value();
-    return *result;
+    Value mutable_copy(*result);
+    mutable_copy.set_origin(get_span());
+    return mutable_copy;
 }
 
 void AccessorNode::evaluate_set(CONTEXT, Value value) {
@@ -265,7 +267,7 @@ enum Arithmetic {
 };
 
 template<Arithmetic ATH>
-Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Value& rhs_value, const Span& op_span, bool assignop = false) {
+Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Value& rhs_value, const BaseNode* op_node, bool assignop = false) {
     Value::Kind kind = Value::Kind::None;
 
     if (lhs_value.kind() == rhs_value.kind())
@@ -288,7 +290,7 @@ Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Val
 
         // FIXME: Add extra clarification on add/remove item if lhs is a list
         *error = Error(
-            op_span,
+            op_node->get_span(),
             "Incompatible types to " + std::string(op_name),
             "You can't do <" + std::string(Value::type_name(lhs_value)) + "> " + std::string(op_symbol) + " <" + std::string(Value::type_name(rhs_value)) + ">"
         );
@@ -299,11 +301,11 @@ Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Val
     switch (kind) {
         case Value::Kind::Integer:
             if constexpr (ATH == ATH_PLUS)
-                return lhs_value.as_integer() + rhs_value.as_integer();
+                return Value(op_node, lhs_value.as_integer() + rhs_value.as_integer());
             else
-                return lhs_value.as_integer() - rhs_value.as_integer();
+                return Value(op_node, lhs_value.as_integer() - rhs_value.as_integer());
         case Value::Kind::String:
-            return lhs_value.as_string() + rhs_value.as_string();
+            return Value(op_node, lhs_value.as_string() + rhs_value.as_string());
         case Value::Kind::List:
         {
             if constexpr (ATH == ATH_PLUS) {
@@ -312,7 +314,7 @@ Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Val
                     result.push_back(std::move(value));
                 for (const auto& value : rhs_value.as_list())
                     result.push_back(std::move(value));
-                return Value(std::move(result));
+                return Value(op_node, std::move(result));
             }
 
             Value mutable_copy(lhs_value);
@@ -321,6 +323,7 @@ Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Val
             if (error->has_error())
                 return Value();
 
+            mutable_copy.set_origin(op_node->get_span());
             return mutable_copy;
         }
         break;
@@ -341,18 +344,18 @@ Value evaluate_binary_operator(CONTEXT, const BinaryOpNode& op_node) {
     TokenKind op = op_node.tok().kind();
     switch (op) {
         case TokenKind::EqualEqual:
-            return lhs_value == rhs_value;
+            return Value(&op_node, lhs_value == rhs_value);
         case TokenKind::NotEqual:
-            return lhs_value != rhs_value;
+            return Value(&op_node, lhs_value != rhs_value);
         case TokenKind::LessEqual:
         case TokenKind::GreaterEqual:
         case TokenKind::LessThan:
         case TokenKind::GreaterThan:
-            return evaluate_integer_comparisson(error, op, lhs_value, rhs_value, op_node.get_span());
+            return Value(&op_node, evaluate_integer_comparisson(error, op, lhs_value, rhs_value, op_node.get_span()));
         case TokenKind::Plus:
-            return evaluate_object_arithmetic<ATH_PLUS>(error, lhs_value, rhs_value, op_node.get_span());
+            return evaluate_object_arithmetic<ATH_PLUS>(error, lhs_value, rhs_value, &op_node);
         case TokenKind::Minus:
-            return evaluate_object_arithmetic<ATH_MINUS>(error, lhs_value, rhs_value, op_node.get_span());
+            return evaluate_object_arithmetic<ATH_MINUS>(error, lhs_value, rhs_value, &op_node);
         default:
             ABORT("invalid token kind in BinaryOpNode");
     }
@@ -375,10 +378,10 @@ Value BinaryOpNode::evaluate(CONTEXT) const {
     Value value;
     switch (op) {
         case TokenKind::Plus:
-            value = evaluate_object_arithmetic<ATH_PLUS>(error, lhs_value, rhs_value, get_span(), /*assignop=*/ true);
+            value = evaluate_object_arithmetic<ATH_PLUS>(error, lhs_value, rhs_value, this, /*assignop=*/ true);
             break;
         case TokenKind::Minus:
-            value = evaluate_object_arithmetic<ATH_MINUS>(error, lhs_value, rhs_value, get_span(), /*assignop=*/ true);
+            value = evaluate_object_arithmetic<ATH_MINUS>(error, lhs_value, rhs_value, this, /*assignop=*/ true);
             break;
         default:
             value = std::move(rhs_value);
@@ -405,7 +408,7 @@ Value BlockNode::evaluate(CONTEXT) const {
 
     if (m_mode == Mode::Discard)
         return Value();
-    return Value(std::move(owned_scope));
+    return Value(this, std::move(owned_scope));
 }
 
 void BlockNode::evaluate_in_scope(CONTEXT) const {
@@ -458,7 +461,9 @@ Value IdentifierNode::evaluate(CONTEXT) const {
     generic_identifier<MUT_IMMUTABLE>(scope, error, m_tok, &result);
     if (error->has_error())
         return Value();
-    return *result;
+    Value mutable_copy(*result);
+    mutable_copy.set_origin(get_span());
+    return mutable_copy;
 }
 
 void IdentifierNode::evaluate_set(CONTEXT, Value value) {
@@ -473,7 +478,7 @@ Value ListNode::evaluate(CONTEXT) const {
         list.push_back(std::move(value));
     }
 
-    return Value(std::move(list));
+    return Value(this, std::move(list));
 }
 
 Value UnaryOpNode::evaluate(CONTEXT) const {

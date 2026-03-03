@@ -100,6 +100,7 @@ Value& Value::copy(const Value& other) {
             break;
     }
     m_kind = other.m_kind;
+    m_origin = other.m_origin;
     return *this;
 }
 
@@ -126,6 +127,8 @@ Value& Value::move(Value&& other) {
 
     m_kind = other.m_kind;
     other.m_kind = Value::Kind::None;
+    m_origin = other.m_origin;
+    other.m_origin = std::nullopt;
     return *this;
 }
 
