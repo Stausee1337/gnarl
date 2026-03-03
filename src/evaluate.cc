@@ -444,6 +444,7 @@ void IdentifierNode::evaluate_set(CONTEXT, Value value) {
 Value ListNode::evaluate(CONTEXT) const {
     std::vector<Value> list;
     for (const auto& item : m_items) {
+        if (item->as_block_comment()) continue;
         Value value = EVAL2VAL(*item, Value());
         list.push_back(std::move(value));
     }

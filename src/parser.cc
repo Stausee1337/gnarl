@@ -373,6 +373,8 @@ std::unique_ptr<ListNode> Parser::parse_comma_seperated_list(TokenKind end_token
             had_comma = allow_trailing_comma;
         else
             had_comma = bump_if(TokenKind::Comma);
+
+        list->append(std::move(expr));
     }
     if (had_comma && !allow_trailing_comma) {
         *error = Error(current().position(), "Trailing comma");

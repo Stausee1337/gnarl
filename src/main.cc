@@ -8,8 +8,8 @@
 
 int main() {
     auto source = R"a(
-a = 69
-x = "Hello, World $0x41"
+# x = "Hello, World $a"
+x = { a = { b = 42 } }
 )a";
 
     gnarl::Error error;

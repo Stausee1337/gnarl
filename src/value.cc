@@ -1,4 +1,5 @@
 
+#include <cstring>
 #include <memory>
 #include <sstream>
 #include "error.h"
@@ -142,22 +143,34 @@ std::string recursive_display(const std::vector<Value>& list) {
     return s;
 }
 
-std::string recursive_display(const Scope& scope) {
+std::string recursive_display(const Scope& scope, uint level) {
     auto values = scope.get_values();
     if (values.size() == 0)
         return "{ }";
+
+    size_t indentation_length = (level + 1) * 2;
+    char* indentation = new char[indentation_length + 1];
+    memset(indentation, ' ', indentation_length);
+    indentation[indentation_length] = '\x00';
 
     std::stringstream stream;
     stream << "{\n";
 
     for (auto iterator = values.begin(); iterator != values.end(); ++iterator) {
+        stream << indentation;
         stream << iterator->first;
         stream << " = ";
-        stream << iterator->second.display();
+        stream << iterator->second.display(level+1);
         stream << "\n";
     }
 
+
+    stream << indentation + 2;
     stream << '}';
+
+    // FIXME: use static memory for indentation buffer
+    // up to reasonlable level's (e.g. 8)
+    delete[] indentation;
 
     return stream.str();
 }
@@ -176,7 +189,7 @@ std::string quoted(const std::string& string) {
     return result;
 }
 
-std::string Value::display() const {
+std::string Value::display(uint level) const {
     switch (m_kind) {
         case Kind::None:
             return "<void>";
@@ -189,7 +202,7 @@ std::string Value::display() const {
         case Kind::List:
             return recursive_display(m_list);
         case Kind::Scope:
-            return recursive_display(*m_scope.get());
+            return recursive_display(*m_scope.get(), level);
     }
 }
 

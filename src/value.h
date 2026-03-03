@@ -92,7 +92,7 @@ public:
 
 
     [[nodiscard]] bool typeck(Kind kind, Error* error, Span position = Span()) const;
-    [[nodiscard]] std::string display() const;
+    [[nodiscard]] std::string display(uint level = 0) const;
     [[nodiscard]] std::string stringify() const;
 
     bool operator==(const Value& other) const;
