@@ -20,7 +20,13 @@ Value* Scope::get_value_mutable(std::string_view name) {
     ValueInfoMap::iterator found_value = m_values.find(name);
     if (found_value == m_values.end())
         return nullptr;
-    return &found_value->second.value;
+    ValueInfo& info = found_value->second;
+    info.used = true;
+    return &info.value;
+}
+
+void Scope::set_value(std::string_view name, Value&& value) {
+    m_values[name] = ValueInfo { .value = value, .used = false };
 }
 
 Scope::ValueMap Scope::get_values() const {
@@ -35,8 +41,7 @@ bool Scope::equals_current_values(const Scope& other) const {
     if (m_values.size() != other.m_values.size())
         return false;
     for (const auto& p : m_values) {
-        // FIXME: counts_as_used may need to be true
-        const Value* value = other.get_value(p.first, /*counts_as_used=*/ false);
+        const Value* value = other.get_value(p.first);
         if (!value || *value != p.second.value)
             return false;
     }

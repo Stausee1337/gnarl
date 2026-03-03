@@ -64,12 +64,17 @@ using GenericRef = std::conditional_t<M == MUT_MUTABLE, T&, const T&>;
 template<Mutability M, typename T>
 using GenericPtr = std::conditional_t<M == MUT_MUTABLE, T*, const T*>;
 
+template<Mutability M, typename T>
+using GenericResult = std::conditional_t<M == MUT_MUTABLE, T*, T const**>;
+
 template<Mutability MUT>
-auto access_list(CONTEXT, GenericRef<MUT, std::vector<Value>> list, const BaseNode& subscript_node) 
-    -> GenericPtr<MUT, Value> {
-    Value subscript_value = EVAL2VAL(subscript_node, nullptr);
+void access_list(CONTEXT,
+        GenericRef<MUT, std::vector<Value>> list,
+        const BaseNode& subscript_node,
+        GenericResult<MUT, Value> result) {
+    Value subscript_value = EVAL2VAL(subscript_node, (void)0);
     if (!subscript_value.typeck(Value::Kind::Integer, error, subscript_node.get_span()))
-        return nullptr;
+        return;
     int64_t subscript = subscript_value.as_integer();
     if (subscript < 0) {
         *error = Error(
@@ -77,7 +82,7 @@ auto access_list(CONTEXT, GenericRef<MUT, std::vector<Value>> list, const BaseNo
             "Negative array subscript",
             "You gave me " + std::to_string(subscript)
         );
-        return nullptr;
+        return;
     }
     if ((size_t)subscript >= list.size()) {
         if (list.empty())
@@ -93,15 +98,21 @@ auto access_list(CONTEXT, GenericRef<MUT, std::vector<Value>> list, const BaseNo
                 "You gave me " + std::to_string(subscript) + " but I was expecting something from 0 to " + std::to_string(list.size() - 1) + ", inclusive"
             );
 
-        return nullptr;
+        return;
     }
 
-    return &list[subscript];
+    if constexpr (MUT == MUT_MUTABLE)
+        list[subscript] = std::move(*result);
+    else
+        *result = &list[subscript];
 }
 
 template<Mutability MUT>
-auto access_scope(CONTEXT, GenericRef<MUT, Scope> obj, const AccessorNode& accessor_node, bool is_subscript) 
-    -> GenericPtr<MUT, Value> {
+void access_scope(CONTEXT,
+        GenericRef<MUT, Scope> obj,
+        const AccessorNode& accessor_node,
+        bool is_subscript,
+        GenericResult<MUT, Value> result) {
 
     Span member_span;
     std::string member_name;
@@ -109,9 +120,9 @@ auto access_scope(CONTEXT, GenericRef<MUT, Scope> obj, const AccessorNode& acces
         const BaseNode& subscript_node = *accessor_node.subscript();
         member_span = subscript_node.get_span();
 
-        Value subscript_value = EVAL2VAL(subscript_node, nullptr);
+        Value subscript_value = EVAL2VAL(subscript_node, (void)0);
         if (!subscript_value.typeck(Value::Kind::String, error, member_span))
-            return nullptr;
+            return;
         member_name = subscript_value.as_string();
     } else {
         const IdentifierNode* node = accessor_node.member();
@@ -119,51 +130,46 @@ auto access_scope(CONTEXT, GenericRef<MUT, Scope> obj, const AccessorNode& acces
         member_span = node->get_span();
     }
 
-    GenericPtr<MUT, Value> value = nullptr;
-    if constexpr (MUT == MUT_MUTABLE)
-        value = obj.get_value_mutable(member_name);
-    else
-        value = obj.get_value(member_name);
-
-    if (value == nullptr) {
-        *error = Error(
-            member_span,
-            "No value named \"" + member_name + "\" in scope \"" + std::string(accessor_node.base().value()) + "\""
-        );
-        return nullptr;
+    if constexpr (MUT == MUT_MUTABLE)  {
+        obj.set_value(member_name, std::move(*result));
+    } else {
+        const Value* value = obj.get_value(member_name);
+        if (value == nullptr) {
+            *error = Error(
+                member_span,
+                "No value named \"" + member_name + "\" in scope \"" + std::string(accessor_node.base().value()) + "\""
+            );
+        }
+        *result = value;
     }
-
-    return nullptr;
 }
 
 template<Mutability MUT>
-auto generic_accessor(CONTEXT, const AccessorNode& accessor) -> GenericPtr<MUT, Value> {
+void generic_accessor(CONTEXT,
+        const AccessorNode& accessor,
+        GenericResult<MUT, Value> result) {
     GenericPtr<MUT, Value> value;
     if constexpr (MUT == MUT_MUTABLE)
-        value = LOOKUP_MUT(accessor.base(), nullptr);
+        value = LOOKUP_MUT(accessor.base(), (void)0);
     else
-        value = LOOKUP(accessor.base(), nullptr);
+        value = LOOKUP(accessor.base(), (void)0);
 
     bool is_subscript = !!accessor.subscript();
 
-    GenericPtr<MUT, Value> result = nullptr;
     switch (value->kind()) {
         case Value::Kind::List:
             if (is_subscript)
-                result = access_list<MUT>(scope, error, value->as_list(), *accessor.subscript());
+                access_list<MUT>(scope, error, value->as_list(), *accessor.subscript(), result);
             break;
         case Value::Kind::Scope:
-            result = access_scope<MUT>(scope, error, value->as_scope(), accessor, is_subscript);
+            access_scope<MUT>(scope, error, value->as_scope(), accessor, is_subscript, result);
             break;
         default:
             break;
     }
 
-    if (result)
-        return result;
-
     if (error->has_error())
-        return nullptr;
+        return;
 
     if (is_subscript)
         *error = Error(
@@ -175,19 +181,19 @@ auto generic_accessor(CONTEXT, const AccessorNode& accessor) -> GenericPtr<MUT, 
             accessor.base().span(),
             "Expecting a scope for named access, got " + std::string(Value::type_name(value))
         );
-    return nullptr;
+    return;
 }
  
 Value AccessorNode::evaluate(CONTEXT) const {
-    const Value* result = generic_accessor<MUT_IMMUTABLE>(scope, error, *this);
-    if (result) return result;
-    return Value();
+    const Value* result;
+    generic_accessor<MUT_IMMUTABLE>(scope, error, *this, &result);
+    if (error->has_error())
+        return Value();
+    return *result;
 }
 
 void AccessorNode::evaluate_set(CONTEXT, Value value) {
-    Value* result = generic_accessor<MUT_MUTABLE>(scope, error, *this);
-    if (!result) return;
-    *result = value;
+    generic_accessor<MUT_MUTABLE>(scope, error, *this, &value);
 }
 
 bool evaluate_integer_comparisson(Error* error, TokenKind op, const Value& lhs_value, const Value& rhs_value, const Span& cmp_span) {
@@ -415,25 +421,24 @@ Value FunctionCallNode::evaluate(CONTEXT) const {
     return Value();
 }
 
-
 template<Mutability MUT>
-auto generic_identifier(CONTEXT, const Token& identifier) -> GenericPtr<MUT, Value> {
+void generic_identifier(CONTEXT, const Token& identifier, GenericResult<MUT, Value> result) {
     if constexpr (MUT == MUT_MUTABLE)
-        return LOOKUP_MUT(identifier, nullptr);
+        scope->set_value(identifier.value(), std::move(*result));
     else
-        return LOOKUP(identifier, nullptr);
+        *result = LOOKUP(identifier, (void)0);
 }
 
 Value IdentifierNode::evaluate(CONTEXT) const {
-    const Value* result = generic_identifier<MUT_IMMUTABLE>(scope, error, m_tok);
-    if (result) return result;
-    return Value();
+    const Value* result;
+    generic_identifier<MUT_IMMUTABLE>(scope, error, m_tok, &result);
+    if (error->has_error())
+        return Value();
+    return *result;
 }
 
 void IdentifierNode::evaluate_set(CONTEXT, Value value) {
-    Value* result = generic_identifier<MUT_MUTABLE>(scope, error, m_tok);
-    if (!result) return;
-    *result = std::move(value);
+    generic_identifier<MUT_MUTABLE>(scope, error, m_tok, &value);
 }
 
 Value ListNode::evaluate(CONTEXT) const {
