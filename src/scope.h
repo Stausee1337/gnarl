@@ -15,9 +15,13 @@ public:
 
     Scope() = default;
     Scope(Scope* parent);
+    Scope(const Scope* parent);
 
     Scope(const Scope&) = default;
     Scope& operator=(const Scope&) = default;
+
+    const Scope* parent() const;
+    void detatch_from_parent();
 
     const Value* get_value(std::string_view name, bool counts_as_used = true) const;
     Value* get_value_mutable(std::string_view name);
@@ -35,7 +39,9 @@ private:
     };
     using ValueInfoMap = std::map<std::string_view, ValueInfo>;
 
-    const Scope* m_parent = nullptr;
+    Scope* m_mutable_parent = nullptr;
+    const Scope* m_const_parent = nullptr;
+
     ValueInfoMap m_values;
 };
 

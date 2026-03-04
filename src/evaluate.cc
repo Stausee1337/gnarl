@@ -408,6 +408,8 @@ Value BlockNode::evaluate(CONTEXT) const {
 
     if (m_mode == Mode::Discard)
         return Value();
+
+    owned_scope->detatch_from_parent();
     return Value(this, std::move(owned_scope));
 }
 
