@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
 #include "lexer.h"
 #include "assertions.h"

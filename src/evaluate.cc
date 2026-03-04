@@ -445,11 +445,6 @@ Value ConditionalNode::evaluate(CONTEXT) const {
     return Value();
 }
 
-Value FunctionCallNode::evaluate(CONTEXT) const {
-    *error = Error(get_span(), "Function calls aren't implemented");
-    return Value();
-}
-
 template<Mutability MUT>
 void generic_identifier(CONTEXT, const Token& identifier, GenericResult<MUT, Value> result) {
     if constexpr (MUT == MUT_MUTABLE)

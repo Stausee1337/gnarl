@@ -8,7 +8,8 @@
 
 int main() {
     auto source = R"a(
-x = ["apple", "pear", "ivy"] - ["grape"]
+x = ["apple", "pear", "ivy"] - ["pear"]
+print(x)
 )a";
 
     gnarl::Error error;
@@ -46,8 +47,6 @@ x = ["apple", "pear", "ivy"] - ["grape"]
         std::cerr << error.help() << "\n";
         return 1;
     }
-
-    std::cout << scope->get_value("x")->stringify() << "\n";
 
     return 0;
 }

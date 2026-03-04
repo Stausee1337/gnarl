@@ -24,7 +24,7 @@ enum Precedence {
 using PrefixFn = std::unique_ptr<BaseNode>(Parser::*)();
 using InfixFn = std::unique_ptr<BaseNode>(Parser::*)(std::unique_ptr<BaseNode> lhs);
 
-struct TokInfo {
+struct TokInfo final {
     PrefixFn prefix;
     InfixFn infix;
     Precedence prec;

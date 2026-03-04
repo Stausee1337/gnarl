@@ -14,6 +14,7 @@ static_library(
         'src/scope.cc',
         'src/evaluate.cc',
         'src/literals.cc',
+        'src/functions.cc',
     ],
 )
 
