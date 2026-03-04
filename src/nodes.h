@@ -41,7 +41,7 @@ public:
 
     virtual Span get_span() const = 0;
     virtual Value evaluate(Scope* scope, Error* error) const = 0;
-    virtual void evaluate_set(Scope* scope, Error* error, Value value);
+    virtual void evaluate_set(Scope* scope, Error* error, Value value) const;
 
     BaseNode(const BaseNode&) = delete;
     BaseNode& operator=(const BaseNode&) = delete;
@@ -70,7 +70,7 @@ public:
 
     Span get_span() const override;
     Value evaluate(Scope* scope, Error* error) const override;
-    void evaluate_set(Scope* scope, Error* error, Value value) override;
+    void evaluate_set(Scope* scope, Error* error, Value value) const override;
 
     const Token& base() const { return m_base; }
     // TODO: maybe use std::variant for this
@@ -251,7 +251,7 @@ public:
 
     Span get_span() const override;
     Value evaluate(Scope* scope, Error* error) const override;
-    void evaluate_set(Scope* scope, Error* error, Value value) override;
+    void evaluate_set(Scope* scope, Error* error, Value value) const override;
 
     const Token& tok() const { return m_tok; }
 
@@ -273,6 +273,7 @@ public:
 
     Span get_span() const override;
     Value evaluate(Scope* scope, Error* error) const override;
+    Value evaluate(Scope* scope, Error* error, size_t index) const;
 
     const Token& end() const { return m_end; }
     void set_end(const Token& end) { m_end = end; }
@@ -284,6 +285,8 @@ public:
     }
 
     size_t size() const { return m_items.size(); }
+
+    const BaseNode* operator[](size_t index) const;
 
 private:
 

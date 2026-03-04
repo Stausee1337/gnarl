@@ -194,7 +194,7 @@ Value AccessorNode::evaluate(CONTEXT) const {
     return mutable_copy;
 }
 
-void AccessorNode::evaluate_set(CONTEXT, Value value) {
+void AccessorNode::evaluate_set(CONTEXT, Value value) const {
     generic_accessor<MUT_MUTABLE>(scope, error, *this, &value);
 }
 
@@ -463,7 +463,7 @@ Value IdentifierNode::evaluate(CONTEXT) const {
     return mutable_copy;
 }
 
-void IdentifierNode::evaluate_set(CONTEXT, Value value) {
+void IdentifierNode::evaluate_set(CONTEXT, Value value) const {
     generic_identifier<MUT_MUTABLE>(scope, error, m_tok, &value);
 }
 
@@ -478,12 +478,20 @@ Value ListNode::evaluate(CONTEXT) const {
     return Value(this, std::move(list));
 }
 
+Value ListNode::evaluate(CONTEXT, size_t index) const {
+    return EVAL2VAL(*m_items[index], Value());
+}
+
+const BaseNode* ListNode::operator[](size_t index) const {
+    return m_items[index].get();
+}
+
 Value UnaryOpNode::evaluate(CONTEXT) const {
     DCHECK(m_tok.kind() == TokenKind::Bang);
     return EVAL2VAL(*m_operand, Value());
 }
 
-void BaseNode::evaluate_set(CONTEXT, Value value) {
+void BaseNode::evaluate_set(CONTEXT, Value value) const {
     ABORT("evaluate_set() cannot is not implemented for this node");
 }
 

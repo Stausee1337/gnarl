@@ -55,6 +55,10 @@ bool Value::operator==(const Value& other) const {
 bool Value::typeck(Kind kind, Error* error, Span span) const {
     if (m_kind == kind)
         return true;
+
+    if (!span.file() && m_origin.has_value())
+        span = m_origin.value();
+
     *error = Error(
         span,
         "This is not a " + std::string(type_name(kind)),

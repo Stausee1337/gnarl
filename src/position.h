@@ -49,6 +49,10 @@ struct Span final {
         m_end_column(end.column())
     {}
 
+    const InputFile* file() const {
+        return m_file;
+    }
+
     Position start() const {
         return Position(m_file, m_start_lineno, m_start_column);
     }

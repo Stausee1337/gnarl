@@ -4,6 +4,7 @@
 #include "error.h"
 #include "nodes.h"
 #include "value.h"
+#include "scope.h"
 #include "functions.h"
 
 namespace gnarl {
@@ -16,11 +17,20 @@ constexpr const char* count2str[] = {
     do {                                                                \
         if (args.size() != (count)) {                                   \
             *error = Error(call_span,                                   \
-                "Wrong number of arguments to" name "()",               \
+                "Wrong number of arguments to " name "()",              \
                 "Expecting exactly " + std::string(count2str[count]));  \
             return Value();                                             \
         }                                                               \
     } while (0)
+
+#define NODECK(node, kind, message) \
+    ({ \
+        if (!node->as_##kind()) {\
+            *error = Error(node, message);\
+            return Value();\
+        }\
+        node->as_##kind();\
+    })
 
 Value builtin_print(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
     std::string result;
@@ -41,10 +51,17 @@ Value builtin_foreach(Scope* scope,
                       const ListNode& args,
                       const BlockNode& block) {
     ARGCK(2, "foreach");
+    auto identifier = NODECK(args[0], identifier, "Expected identifier for the loop var");
 
-    // for (const auto& v : args) {
+    Value list_value = args.evaluate(scope, error, 1);
+    if (!list_value.typeck(Value::Kind::List, error))
+        return Value();
 
-    // }
+    const std::vector<Value>& list = list_value.as_list();
+    for (const auto& v : list) {
+        identifier->evaluate_set(scope, error, v);
+        block.evaluate(scope, error);
+    }
     return Value();
 }
 
@@ -58,17 +75,17 @@ using BlockMacro = Value(CONTEXT, const ListNode& args, const BlockNode& block);
 #undef CONTEXT
 
 struct BuiltinInfo final {
-    enum Kind {
+    enum Linkage {
         func  = 0b00,
         macro = 0b01,
         flat  = 0b00,
         block = 0b10,
     };
 
-    bool is_block() const { return m_kind & block; }
-    bool is_macro() const { return m_kind & macro; }
+    bool is_block() const { return link & block; }
+    bool is_macro() const { return link & macro; }
     
-    Kind m_kind;
+    Linkage link;
     union {
         FlatFunc*   flatfunc;
         FlatMacro*  flatmacro;
@@ -77,21 +94,21 @@ struct BuiltinInfo final {
     };
 };
 
-using BuiltinMap = std::unordered_map<std::string_view, BuiltinInfo>;
 
 struct BuiltinFunctionContainer final {
-    BuiltinMap function_map;
+    using Info = BuiltinInfo;
+    using Map = std::unordered_map<std::string_view, Info>;
 
     BuiltinFunctionContainer() {
 #define REG_LINKAGE(name, fob, fom) \
-    function_map[#name] = BuiltinInfo { .m_kind = (BuiltinInfo::Kind)(BuiltinInfo::fob | BuiltinInfo::fom), .fob##fom = &builtin_##name };
+    map[#name] = BuiltinInfo { .link = (Info::Linkage)(Info::fob | Info::fom), .fob##fom = &builtin_##name };
 
-#define REG_FLAT_FUNC(name) REG_LINKAGE(name, flat, func)
-#define REG_FLAT_MACRO(name) REG_LINKAGE(name, flat, macro)
-#define REG_BLOCK_FUNC(name) REG_LINKAGE(name, block, func)
+#define REG_FLAT_FUNC(name)   REG_LINKAGE(name, flat,  func)
+#define REG_FLAT_MACRO(name)  REG_LINKAGE(name, flat,  macro)
+#define REG_BLOCK_FUNC(name)  REG_LINKAGE(name, block, func)
 #define REG_BLOCK_MACRO(name) REG_LINKAGE(name, block, macro)
 
-BUILTIN_LIST(REG_FLAT_FUNC, REG_FLAT_MACRO, REG_BLOCK_FUNC, REG_BLOCK_MACRO);
+BUILTIN_LIST(REG_FLAT_FUNC, REG_FLAT_MACRO, REG_BLOCK_FUNC, REG_BLOCK_MACRO)
 
 #undef REG_FLAT_FUNC
 #undef REG_FLAT_MACRO
@@ -99,12 +116,14 @@ BUILTIN_LIST(REG_FLAT_FUNC, REG_FLAT_MACRO, REG_BLOCK_FUNC, REG_BLOCK_MACRO);
 #undef REG_BLOCK_MACRO
 #undef REG_LINKAGE
     }
+
+    Map map;
 };
 
 const BuiltinInfo* lookup_builtin(const std::string_view& name) {
     static BuiltinFunctionContainer builtins;
-    BuiltinMap::const_iterator iterator = builtins.function_map.find(name);
-    if (iterator == builtins.function_map.end())
+    BuiltinFunctionContainer::Map::const_iterator iterator = builtins.map.find(name);
+    if (iterator == builtins.map.end())
         return nullptr;
     return &iterator->second;
 }
