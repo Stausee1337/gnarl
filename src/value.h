@@ -29,11 +29,36 @@ public:
     };
 
     Value() : m_kind(Kind::None) {}
-    Value(const BaseNode* node, bool boolean) : m_kind(Kind::Boolean), m_boolean(boolean), m_origin(node->get_span()) {}
-    Value(const BaseNode* node, int64_t integer) : m_kind(Kind::Integer), m_integer(integer), m_origin(node->get_span()) {}
-    Value(const BaseNode* node, std::string&& string) : m_kind(Kind::String), m_string(std::move(string)), m_origin(node->get_span()) {}
-    Value(const BaseNode* node, std::vector<Value>&& list) : m_kind(Kind::List), m_list(std::move(list)), m_origin(node->get_span()) {}
-    Value(const BaseNode* node, std::unique_ptr<Scope>&& scope) : m_kind(Kind::Scope), m_scope(std::move(scope)), m_origin(node->get_span()) {}
+
+    Value(const BaseNode* node, bool boolean) 
+        : m_kind(Kind::Boolean),
+        m_boolean(boolean),
+        m_origin(node ? std::optional(node->get_span()) : std::nullopt)
+    {}
+
+    Value(const BaseNode* node, int64_t integer) 
+        : m_kind(Kind::Integer),
+        m_integer(integer),
+        m_origin(node ? std::optional(node->get_span()) : std::nullopt)
+    {}
+
+    Value(const BaseNode* node, std::string&& string) 
+        : m_kind(Kind::String),
+        m_string(std::move(string)),
+        m_origin(node ? std::optional(node->get_span()) : std::nullopt)
+    {}
+
+    Value(const BaseNode* node, std::vector<Value>&& list) 
+        : m_kind(Kind::List),
+        m_list(std::move(list)),
+        m_origin(node ? std::optional(node->get_span()) : std::nullopt)
+    {}
+
+    Value(const BaseNode* node, std::unique_ptr<Scope>&& scope) 
+        : m_kind(Kind::Scope),
+        m_scope(std::move(scope)),
+        m_origin(node ? std::optional(node->get_span()) : std::nullopt)
+    {}
 
     ~Value();
 

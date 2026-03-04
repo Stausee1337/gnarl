@@ -8,7 +8,21 @@
 
 namespace gnarl {
 
-Value builtin_print(Scope* scope, Error* error, const std::vector<Value>& args) {
+constexpr const char* count2str[] = {
+    "zero", "one", "two", "three"
+};
+
+#define ARGCK(count, name)                                              \
+    do {                                                                \
+        if (args.size() != (count)) {                                   \
+            *error = Error(call_span,                                   \
+                "Wrong number of arguments to" name "()",               \
+                "Expecting exactly " + std::string(count2str[count]));  \
+            return Value();                                             \
+        }                                                               \
+    } while (0)
+
+Value builtin_print(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
     std::string result;
     for (auto iterator = args.begin(); iterator != args.end(); ++iterator) {
         if (iterator != args.begin())
@@ -21,12 +35,46 @@ Value builtin_print(Scope* scope, Error* error, const std::vector<Value>& args) 
     return Value();
 }
 
-using FlatFn = Value(Scope* scope, Error* error, const std::vector<Value>& args);
-using BlockFn = Value(Scope* scope, Error* error, const std::vector<Value>& args, const BlockNode& block);
+Value builtin_foreach(Scope* scope,
+                      Error* error,
+                      const Span& call_span,
+                      const ListNode& args,
+                      const BlockNode& block) {
+    ARGCK(2, "foreach");
+
+    // for (const auto& v : args) {
+
+    // }
+    return Value();
+}
+
+#define CONTEXT Scope* scope, Error* error, const Span& call
+
+using FlatFunc = Value(CONTEXT, const std::vector<Value>& args);
+using FlatMacro = Value(CONTEXT, const ListNode& args);
+using BlockFunc = Value(CONTEXT, const std::vector<Value>& args, const BlockNode& block);
+using BlockMacro = Value(CONTEXT, const ListNode& args, const BlockNode& block);
+
+#undef CONTEXT
 
 struct BuiltinInfo final {
-    FlatFn* flat_fn;
-    BlockFn* block_fn;
+    enum Kind {
+        func  = 0b00,
+        macro = 0b01,
+        flat  = 0b00,
+        block = 0b10,
+    };
+
+    bool is_block() const { return m_kind & block; }
+    bool is_macro() const { return m_kind & macro; }
+    
+    Kind m_kind;
+    union {
+        FlatFunc*   flatfunc;
+        FlatMacro*  flatmacro;
+        BlockFunc*  blockfunc;
+        BlockMacro* blockmacro;
+    };
 };
 
 using BuiltinMap = std::unordered_map<std::string_view, BuiltinInfo>;
@@ -35,12 +83,21 @@ struct BuiltinFunctionContainer final {
     BuiltinMap function_map;
 
     BuiltinFunctionContainer() {
-#define REG_FLAT_BUILTIN(name) \
-        function_map[#name] = BuiltinInfo {&builtin_##name, nullptr};
+#define REG_LINKAGE(name, fob, fom) \
+    function_map[#name] = BuiltinInfo { .m_kind = (BuiltinInfo::Kind)(BuiltinInfo::fob | BuiltinInfo::fom), .fob##fom = &builtin_##name };
 
-ENUMERATE_FLAT_BUILTINS(REG_FLAT_BUILTIN)
+#define REG_FLAT_FUNC(name) REG_LINKAGE(name, flat, func)
+#define REG_FLAT_MACRO(name) REG_LINKAGE(name, flat, macro)
+#define REG_BLOCK_FUNC(name) REG_LINKAGE(name, block, func)
+#define REG_BLOCK_MACRO(name) REG_LINKAGE(name, block, macro)
 
-#undef REG_FLAT_BUILTIN
+BUILTIN_LIST(REG_FLAT_FUNC, REG_FLAT_MACRO, REG_BLOCK_FUNC, REG_BLOCK_MACRO);
+
+#undef REG_FLAT_FUNC
+#undef REG_FLAT_MACRO
+#undef REG_BLOCK_FUNC
+#undef REG_BLOCK_MACRO
+#undef REG_LINKAGE
     }
 };
 
@@ -59,7 +116,7 @@ Value FunctionCallNode::evaluate(Scope* scope, Error* error) const {
         return Value();
     }
 
-    if (builtin->flat_fn && m_block) {
+    if (!builtin->is_block() && m_block) {
         *error = Error(m_block->get_span(),
                        "Unexpected '{'",
                        "This function call doesn't take a {} block following it, and you\n"
@@ -69,19 +126,36 @@ Value FunctionCallNode::evaluate(Scope* scope, Error* error) const {
         return Value();
     }
 
-    if (builtin->block_fn && !m_block) {
+    if (builtin->is_block() && !m_block) {
         *error = Error(m_function.span(), "This function call requires a block");
         return Value();
     }
 
-    Value args_value = m_args->evaluate(scope, error);
-    DCHECK(args_value.kind() == Value::Kind::List);
-    const std::vector<Value>& args = args_value.as_list();
+    Span call_span = get_span();
 
+#define MK_FLAT_OR_BLOCK_CALL(func_or_macro)                                                \
+    if (builtin->is_block())                                                                \
+        result = builtin->block##func_or_macro(scope, error, call_span, args, *m_block);    \
+    else                                                                                    \
+        result = builtin->flat##func_or_macro(scope, error, call_span, args);
+
+    Value result;
     // TODO: track call stack
-    if (builtin->flat_fn)
-        return builtin->flat_fn(scope, error, args);
-    return builtin->block_fn(scope, error, args, *m_block);
+    if (builtin->is_macro()) {
+        const ListNode& args = *m_args;
+        MK_FLAT_OR_BLOCK_CALL(macro);
+    } else {
+        Value args_value = m_args->evaluate(scope, error);
+        DCHECK(args_value.kind() == Value::Kind::List);
+        const std::vector<Value>& args = args_value.as_list();
+        MK_FLAT_OR_BLOCK_CALL(func);
+    }
+
+    if (result.kind() != Value::Kind::None)
+        result.set_origin(this->get_span());
+    return result;
+
+#undef MK_FLAT_OR_BLOCK_CALL
 }
 
 }

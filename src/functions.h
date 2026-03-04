@@ -3,22 +3,44 @@
 #define GNARL_FUNCTIONS_H_
 
 #include <vector>
+#include "nodes.h"
 
 namespace gnarl {
 
-class Value;
-class Scope;
-class Error;
+// LFF: linkage flat function
+//      args
+// LFM: linkage flat macro
+//      args node
+// LBF: linkage block function
+//      args, block node
+// LBM: linkage block macro
+//      args node, block node
 
-#define DECL_FLAT_BUILTIN(name) \
-    Value builtin_##name(Scope* scope, Error* error, const std::vector<Value>& args);
+#define BUILTIN_LIST(LFF, LFM, LBF, LBM) \
+    LFF(print)                           \
+    LBM(foreach)                         \
 
-#define ENUMERATE_FLAT_BUILTINS(X) \
-    X(print)
 
-ENUMERATE_FLAT_BUILTINS(DECL_FLAT_BUILTIN)
+#define CONTEXT Scope* scope, Error* error, const Span& call
 
-#undef DECL_FLAT_BUILTIN
+#define DECL_FLAT_FUNC(name) \
+    Value builtin_##name(CONTEXT, const std::vector<Value>& args);
+
+#define DECL_FLAT_MACRO(name) \
+    Value builtin_##name(CONTEXT, const ListNode& args_node);
+
+#define DECL_BLOCK_FUNC(name) \
+    Value builtin_##name(CONTEXT, const std::vector<Value>& args, const BlockNode& block);
+
+#define DECL_BLOCK_MACRO(name) \
+    Value builtin_##name(CONTEXT, const ListNode& args_node, const BlockNode& block);
+
+BUILTIN_LIST(DECL_FLAT_FUNC, DECL_FLAT_MACRO, DECL_BLOCK_FUNC, DECL_BLOCK_MACRO)
+
+#undef DECL_FLAT_FUNC
+#undef DECL_BLOCK_MACRO
+
+#undef CONTEXT
 }
 
 #endif // GNARL_FUNCTIONS_H_

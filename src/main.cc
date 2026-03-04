@@ -10,6 +10,11 @@ int main() {
     auto source = R"a(
 x = ["apple", "pear", "ivy"] - ["pear"]
 print(x)
+
+foreach(i, x) {
+    print(i)
+}
+
 )a";
 
     gnarl::Error error;

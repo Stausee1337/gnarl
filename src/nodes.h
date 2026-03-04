@@ -283,6 +283,8 @@ public:
         m_items.push_back(std::move(node));
     }
 
+    size_t size() const { return m_items.size(); }
+
 private:
 
     Token m_start;
