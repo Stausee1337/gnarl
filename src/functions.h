@@ -16,9 +16,20 @@ namespace gnarl {
 // LBM: linkage block macro
 //      args node, block node
 
-#define BUILTIN_LIST(LFF, LFM, LBF, LBM) \
-    LFF(print)                           \
-    LBM(foreach)                         \
+#define BUILTIN_LIST(LFF, LFM, LBF, LBM)    \
+    LFF(assert)                             \
+    LFF(forward_variables_from)             \
+    LFF(getenv)                             \
+    LFF(len)                                \
+    LFF(not_needed)                         \
+    LFF(print)                              \
+    LFF(split_list)                         \
+    LFF(string_hash)                        \
+    LFF(string_join)                        \
+    LFF(string_replace)                     \
+    LFF(string_split)                       \
+    LFM(defined)                            \
+    LBM(foreach)                            \
 
 
 #define CONTEXT Scope* scope, Error* error, const Span& call

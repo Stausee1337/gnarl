@@ -9,28 +9,122 @@
 
 namespace gnarl {
 
-constexpr const char* count2str[] = {
-    "zero", "one", "two", "three"
-};
-
-#define ARGCK(count, name)                                              \
+#define ARGCK(name, ...)                                                \
     do {                                                                \
-        if (args.size() != (count)) {                                   \
+        if (!in_range(args.size(), __VA_ARGS__)) {                      \
             *error = Error(call_span,                                   \
-                "Wrong number of arguments to " name "()",              \
-                "Expecting exactly " + std::string(count2str[count]));  \
+                           "Wrong number of arguments to " name "()",   \
+                           expected_argcount(name, __VA_ARGS__));       \
             return Value();                                             \
         }                                                               \
     } while (0)
 
-#define NODECK(node, kind, message) \
-    ({ \
-        if (!node->as_##kind()) {\
-            *error = Error(node, message);\
-            return Value();\
-        }\
-        node->as_##kind();\
+#define NODECK(node, kind, message)         \
+    ({                                      \
+        if (!node->as_##kind()) {           \
+            *error = Error(node, message);  \
+            return Value();                 \
+        }                                   \
+        node->as_##kind();                  \
     })
+
+bool in_range(size_t target, size_t exactly) { return target == exactly; }
+bool in_range(size_t target, size_t min, size_t max) {
+    return target >= min && target <= max;
+}
+
+constexpr const char* count2str[] = {
+    "zero", "one", "two", "three"
+};
+
+std::string expected_argcount(const char* name, size_t exactly) {
+    return std::string(name) + "() takes exactly " + std::string(count2str[exactly]) + "arguments";
+}
+
+std::string expected_argcount(const char* name, size_t min, size_t max) {
+    if (max - min == 1)
+        return std::string(name) 
+                + "() takes "
+                + std::string(count2str[min])
+                + " or "
+                + std::string(count2str[max])
+                + " arguments";
+    return std::string(name) 
+            + "() takes between "
+            + std::string(count2str[min])
+            + " and "
+            + std::string(count2str[max])
+            + " arguments";
+}
+
+Value builtin_assert(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("assert", 1, 2);
+    const Value& condition_value = args[0];
+    if (!condition_value.typeck(Value::Kind::Boolean, error))
+        return Value();
+    bool condition = condition_value.as_boolean();
+
+    std::string message;
+    if (args.size() > 1) {
+        const Value& message_value = args[1];
+        if (!message_value.typeck(Value::Kind::String, error))
+            return Value();
+        message = message_value.as_string();
+    }
+
+    if (condition) return Value();
+
+    *error = Error(call_span, "Assertion failed", message);
+    return Value();
+}
+
+Value builtin_forward_variables_from(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+
+    return Value();
+}
+
+Value builtin_getenv(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("getenv", 1);
+
+    const Value& key_value = args[0];
+    if (!key_value.typeck(Value::Kind::String, error))
+        return Value();
+    const std::string& key = key_value.as_string();
+
+    // FIXME: lookup based on "opposite" case as well
+    std::string result;
+    const char* variable = std::getenv(key.c_str());
+    if (variable != nullptr)
+        result = std::string(variable);
+
+    return Value(nullptr, std::move(result));
+}
+
+Value builtin_len(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("len", 1);
+
+    const Value& value = args[0];
+    switch(value.kind()) {
+        case Value::Kind::String:
+            return Value(nullptr, (int64_t)value.as_string().size());
+        case Value::Kind::List:
+            return Value(nullptr, (int64_t)value.as_list().size());
+        default:
+        {
+            Span span = value.origin() ? *value.origin() : Span();
+            *error = Error(span,
+                    "len() expects a string or a list",
+                    "Got " + std::string(Value::type_name(value)) + " instead");
+            return Value();
+        }
+        break;
+
+    }
+}
+
+Value builtin_not_needed(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    return Value();
+}
 
 Value builtin_print(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
     std::string result;
@@ -45,22 +139,46 @@ Value builtin_print(Scope* scope, Error* error, const Span& call_span, const std
     return Value();
 }
 
+Value builtin_split_list(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    return Value();
+}
+
+Value builtin_string_join(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    return Value();
+}
+
+Value builtin_string_replace(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    return Value();
+}
+
+Value builtin_string_split(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    return Value();
+}
+
+Value builtin_defined(Scope* scope, Error* error, const Span& call_span, const ListNode& args) {
+    return Value();
+}
+
 Value builtin_foreach(Scope* scope,
                       Error* error,
                       const Span& call_span,
                       const ListNode& args,
                       const BlockNode& block) {
-    ARGCK(2, "foreach");
+    ARGCK("foreach", 2);
     auto identifier = NODECK(args[0], identifier, "Expected identifier for the loop var");
 
     Value list_value = args.evaluate(scope, error, 1);
+    if (error->has_error())
+        return Value();
     if (!list_value.typeck(Value::Kind::List, error))
         return Value();
 
     const std::vector<Value>& list = list_value.as_list();
     for (const auto& v : list) {
-        identifier->evaluate_set(scope, error, v);
+        scope->set_value(identifier->tok().value(), Value(v));
         block.evaluate(scope, error);
+        if (error->has_error())
+            return Value();
     }
     return Value();
 }
@@ -159,12 +277,14 @@ Value FunctionCallNode::evaluate(Scope* scope, Error* error) const {
         result = builtin->flat##func_or_macro(scope, error, call_span, args);
 
     Value result;
-    // TODO: track call stack
+
     if (builtin->is_macro()) {
         const ListNode& args = *m_args;
         MK_FLAT_OR_BLOCK_CALL(macro);
     } else {
         Value args_value = m_args->evaluate(scope, error);
+        if (error->has_error())
+            return Value();
         DCHECK(args_value.kind() == Value::Kind::List);
         const std::vector<Value>& args = args_value.as_list();
         MK_FLAT_OR_BLOCK_CALL(func);

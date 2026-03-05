@@ -12,8 +12,10 @@ x = ["apple", "pear", "ivy"] - ["pear"]
 print(x)
 
 foreach(i, x) {
-    print(i)
+    assert(i != "pear", "Pear can't be here")
 }
+
+print(len(1337))
 
 )a";
 
