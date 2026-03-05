@@ -8,27 +8,9 @@
 
 int main() {
     auto source = R"a(
-# x = ["apple", "pear", "ivy"] - ["pear"]
-# print(x)
-# 
-# foreach(i, x) {
-#     assert(i != "pear", "Pear can't be here")
-# }
-# 
-# os_path = getenv("PATH")
-# 
-# print(len(os_path))
-# print(os_path)
-# 
-# paths = string_split(os_path, ":")
-# print(paths, len(paths))
-# chunked = split_list(paths, 3)
-# print(chunked)
 
-# print(string_join(":", paths) == os_path)
-print(string_split("  a b  "))
-
-# print(string_replace("The fat cat sat", "at", "un"))
+scope = { x = 42 }
+print(defined(scope[1337]))
 
 )a";
 

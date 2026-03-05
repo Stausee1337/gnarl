@@ -334,7 +334,39 @@ Value builtin_string_split(Scope* scope, Error* error, const Span& call_span, co
 }
 
 Value builtin_defined(Scope* scope, Error* error, const Span& call_span, const ListNode& args) {
-    return Value();
+    ARGCK("defined", 1);
+
+    const BaseNode* node = args[0];
+    if (!(node->as_identifier() || node->as_accessor())) {
+        *error = Error(call_span,
+                      "Bad thing passed to defined()",
+                      "It should be of the from defined(foo), defined(foo.bar) or defined(foo[<string-expression>])");
+        return Value();
+    }
+
+    if (auto ident = node->as_identifier())
+        return Value(nullptr, scope->has_value(ident->tok().value()));
+
+    auto accessor = node->as_accessor();
+    IdentifierNode identifier(accessor->base());
+    Value node_scope_value = identifier.evaluate(scope, error);
+    if (error->has_error())
+        return Value();
+    if (!node_scope_value.typeck(Value::Kind::Scope, error))
+        return Value();
+
+    const Scope& node_scope = node_scope_value.as_scope();
+    if (auto member = accessor->member())
+        return Value(nullptr, node_scope.has_value(member->tok().value()));
+
+    Value subscript_value = accessor->subscript()->evaluate(scope, error);
+    if (error->has_error())
+        return Value();
+    if (!subscript_value.typeck(Value::Kind::String, error))
+        return Value();
+
+    const std::string& subscript = subscript_value.as_string();
+    return Value(nullptr, node_scope.has_value(subscript));
 }
 
 Value builtin_foreach(Scope* scope,

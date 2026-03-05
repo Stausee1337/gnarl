@@ -23,6 +23,7 @@ public:
     const Scope* parent() const;
     void detatch_from_parent();
 
+    bool has_value(std::string_view name) const;
     const Value* get_value(std::string_view name, bool counts_as_used = true) const;
     Value* get_value_mutable(std::string_view name);
 

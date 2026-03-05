@@ -9,6 +9,11 @@ Scope::Scope(Scope* parent) : m_mutable_parent(parent)
 Scope::Scope(const Scope* parent) : m_const_parent(parent)
 {}
 
+bool Scope::has_value(std::string_view name) const {
+    ValueInfoMap::const_iterator found_value = m_values.find(name);
+    return found_value != m_values.end();
+}
+
 const Value* Scope::get_value(std::string_view name, bool counts_as_used) const {
     Scope& self = *const_cast<Scope*>(this);
     ValueInfoMap::iterator found_value = self.m_values.find(name);

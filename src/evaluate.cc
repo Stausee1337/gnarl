@@ -124,6 +124,7 @@ void access_scope(CONTEXT,
         if (!subscript_value.typeck(Value::Kind::String, error, member_span))
             return;
         member_name = subscript_value.as_string();
+        // FIXME: error on empty string
     } else {
         const IdentifierNode* node = accessor_node.member();
         member_name = node->tok().value();
