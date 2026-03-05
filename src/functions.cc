@@ -1,4 +1,5 @@
 
+#include <sstream>
 #include <string.h>
 #include <unordered_map>
 
@@ -35,7 +36,7 @@ bool in_range(size_t target, size_t min, size_t max) {
 }
 
 constexpr const char* count2str[] = {
-    "zero", "one", "two", "three"
+    "zero", "one", "two", "three", "four"
 };
 
 std::string expected_argcount(const char* name, size_t exactly) {
@@ -112,7 +113,7 @@ Value builtin_len(Scope* scope, Error* error, const Span& call_span, const std::
             return Value(nullptr, static_cast<int64_t>(value.as_list().size()));
         default:
         {
-            Span span = value.origin() ? *value.origin() : Span();
+            Span span = value.origin() ? *value.origin() : call_span;
             *error = Error(span,
                     "len() expects a string or a list",
                     "Got " + std::string(Value::type_name(value)) + " instead");
@@ -185,11 +186,88 @@ Value builtin_split_list(Scope* scope, Error* error, const Span& call_span, cons
 }
 
 Value builtin_string_join(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
-    return Value();
+    ARGCK("string_join", 2);
+
+    const Value& delimiter_value = args[0];
+    if (!delimiter_value.typeck(Value::Kind::String, error))
+        return Value();
+    const std::string& delimiter = delimiter_value.as_string();
+
+    const Value& list_value = args[1];
+    if (!list_value.typeck(Value::Kind::List, error))
+        return Value();
+    const std::vector<Value>& list = list_value.as_list();
+
+    std::stringstream stream;
+    for (auto iterator = list.begin(); iterator != list.end(); ++iterator) {
+        if (iterator != list.begin())
+            stream << delimiter;
+        if (!iterator->typeck(Value::Kind::String, error))
+            return Value();
+        stream << iterator->as_string();
+    }
+
+    return Value(nullptr, stream.str());
 }
 
 Value builtin_string_replace(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
-    return Value();
+    ARGCK("string_replace", 3, 4);
+
+    const Value& str_value = args[0];
+    if (!str_value.typeck(Value::Kind::String, error))
+        return Value();
+    std::string_view str = std::string_view(str_value.as_string());
+
+    const Value& old_value = args[1];
+    if (!old_value.typeck(Value::Kind::String, error))
+        return Value();
+    std::string_view old = std::string_view(old_value.as_string());
+
+    const Value& new_value = args[2];
+    if (!new_value.typeck(Value::Kind::String, error))
+        return Value();
+    const std::string& mew = new_value.as_string();
+
+    uint64_t max_split = -1;
+    if (args.size() > 3) {
+        const Value& maxsplit_value = args[3];
+        if (!maxsplit_value.typeck(Value::Kind::Integer, error))
+            return Value();
+        int64_t maxsplit = maxsplit_value.as_integer();
+
+        if (maxsplit < 1) {
+            Span span = maxsplit_value.origin() ? *maxsplit_value.origin() : call_span;
+            *error = Error(span, "Requested number of replacements is not positive");
+            return Value();
+        }
+        max_split = maxsplit;
+    }
+
+    if (str.size() <= old.size()) {
+        if (str == old) return Value(nullptr, std::string(mew));
+        return Value(nullptr, std::string(str));
+    }
+
+    const char* begin = str.data();
+    const char* str_end = str.data() + str.size();
+    const char* iter_end = str.data() + (str.size() - old.size());
+    const char* current = begin;
+
+    std::stringstream result;
+    uint64_t split_count = 0;
+    while (current <= iter_end && split_count < max_split) {
+        if (strncmp(current, old.data(), old.size()) == 0) {
+            split_count++;
+            result << mew;
+            current += old.size();
+        } else {
+            result << *current;
+            current++;
+        }
+    }
+
+    result << std::string_view(current, str_end - current);
+    return Value(nullptr, result.str());
 }
 
 std::string_view chop_by_delim(std::string_view* string, std::string_view delimiter) {
@@ -206,20 +284,16 @@ std::string_view chop_by_delim(std::string_view* string, std::string_view delimi
     const char* string_end = begin + string->size();
 
     const char* current = begin;
-    while (current < iter_end) {
+    while (current <= iter_end) {
         if (strncmp(current, delimiter.data(), delimiter.size()) == 0)
             break;
         current++;
     }
 
-    if (current == iter_end) {
-        std::string_view result = *string;
-        *string = "";
-        return result;
-    }
-
     size_t segment_size = current - begin;
+
     current += delimiter.size();
+    if (current > string_end) current = string_end;
 
     size_t remainder_size = string_end - current;
     *string = std::string_view(current, remainder_size);
@@ -235,12 +309,19 @@ Value builtin_string_split(Scope* scope, Error* error, const Span& call_span, co
         return Value();
     std::string_view string = std::string_view(string_value.as_string());
 
+    // FIXME: gn's string_split edge-behaviour is actually quite different.
+    // It behaves differently between default (whitespace) and non-default delimiters
     std::string_view delimiter = " ";
     if (args.size() > 1) {
         const Value& delimiter_value = args[1];
         if (!delimiter_value.typeck(Value::Kind::String, error))
             return Value();
         delimiter = delimiter_value.as_string();
+        if (delimiter.empty()) {
+            Span span = delimiter_value.origin() ? *delimiter_value.origin() : call_span;
+            *error = Error(span, "Seperator argument to string_split() cannot be an empty string");
+            return Value();
+        }
     }
 
     std::vector<Value> result;

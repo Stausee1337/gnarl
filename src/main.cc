@@ -8,25 +8,27 @@
 
 int main() {
     auto source = R"a(
-x = ["apple", "pear", "ivy"] - ["pear"]
-print(x)
+# x = ["apple", "pear", "ivy"] - ["pear"]
+# print(x)
+# 
+# foreach(i, x) {
+#     assert(i != "pear", "Pear can't be here")
+# }
+# 
+# os_path = getenv("PATH")
+# 
+# print(len(os_path))
+# print(os_path)
+# 
+# paths = string_split(os_path, ":")
+# print(paths, len(paths))
+# chunked = split_list(paths, 3)
+# print(chunked)
 
-foreach(i, x) {
-    assert(i != "pear", "Pear can't be here")
-}
+# print(string_join(":", paths) == os_path)
+print(string_split("  a b  "))
 
-os_path = getenv("PATH")
-
-print(len(os_path))
-print(os_path)
-
-paths = string_split(os_path, ":")
-print(paths, len(paths))
-chunked = split_list(paths, 3)
-print(chunked)
-print(len(chunked[0]))
-print(len(chunked[1]))
-print(len(chunked[2]))
+# print(string_replace("The fat cat sat", "at", "un"))
 
 )a";
 

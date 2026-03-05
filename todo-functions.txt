@@ -22,8 +22,8 @@ _ rebase_path (TODO: PathIO)
 _ set_defaults (TODO: Buildfile Targets)
 X split_list
 _ string_hash (TODO: Sha265)
-* string_join
-* string_replace
+X string_join
+X string_replace
 X string_split
 _ write_file (TODO: PathIO, Value Conversion)
 * defined

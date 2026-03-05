@@ -113,7 +113,7 @@ bool i64_from_ascii(const char* begin, size_t length, int64_t* result) {
 
     bool is_positive = true;
     if (*begin == '+' || *begin == '-') {
-        is_positive = *begin == '-';
+        is_positive = *begin != '-';
         begin++;
     }
 
