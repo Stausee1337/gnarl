@@ -1,4 +1,5 @@
 
+#include <string.h>
 #include <unordered_map>
 
 #include "error.h"
@@ -106,9 +107,9 @@ Value builtin_len(Scope* scope, Error* error, const Span& call_span, const std::
     const Value& value = args[0];
     switch(value.kind()) {
         case Value::Kind::String:
-            return Value(nullptr, (int64_t)value.as_string().size());
+            return Value(nullptr, static_cast<int64_t>(value.as_string().size()));
         case Value::Kind::List:
-            return Value(nullptr, (int64_t)value.as_list().size());
+            return Value(nullptr, static_cast<int64_t>(value.as_list().size()));
         default:
         {
             Span span = value.origin() ? *value.origin() : Span();
@@ -140,7 +141,47 @@ Value builtin_print(Scope* scope, Error* error, const Span& call_span, const std
 }
 
 Value builtin_split_list(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
-    return Value();
+    ARGCK("split_list", 2);
+
+    const Value& list_value = args[0];
+    if (!list_value.typeck(Value::Kind::List, error))
+        return Value();
+    const std::vector<Value>& list = list_value.as_list();
+
+    const Value& n_value = args[1];
+    if (!n_value.typeck(Value::Kind::Integer, error))
+        return Value();
+    int64_t n = n_value.as_integer();
+
+    std::vector<Value> result;
+    result.resize(n);
+
+    int64_t min_items_per_list = static_cast<int64_t>(list.size()) / n;
+    int64_t extra_items = static_cast<int64_t>(list.size()) % n;
+
+    int64_t max_items_per_list = min_items_per_list + 1;
+    auto prev_item = list.begin();
+    for (int64_t i = 0; i < extra_items; ++i) {
+        std::vector<Value> sublist;
+
+        auto curr_item = prev_item + max_items_per_list;
+        sublist.assign(prev_item, curr_item);
+        prev_item = curr_item;
+
+        result[i] = Value(nullptr, std::move(sublist));
+    }
+
+    for (int64_t i = extra_items; i < n; ++i) {
+        std::vector<Value> sublist;
+
+        auto curr_item = prev_item + min_items_per_list;
+        sublist.assign(prev_item, curr_item);
+        prev_item = curr_item;
+
+        result[i] = Value(nullptr, std::move(sublist));
+    }
+
+    return Value(nullptr, std::move(result));
 }
 
 Value builtin_string_join(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
@@ -151,8 +192,64 @@ Value builtin_string_replace(Scope* scope, Error* error, const Span& call_span, 
     return Value();
 }
 
+std::string_view chop_by_delim(std::string_view* string, std::string_view delimiter) {
+    if (string->length() <= delimiter.length()) {
+        std::string_view result = *string;
+        *string = "";
+        if (result == delimiter)
+            return "";
+        return result;
+    }
+
+    const char* begin = string->data();
+    const char* iter_end = begin + (string->size() - delimiter.size());
+    const char* string_end = begin + string->size();
+
+    const char* current = begin;
+    while (current < iter_end) {
+        if (strncmp(current, delimiter.data(), delimiter.size()) == 0)
+            break;
+        current++;
+    }
+
+    if (current == iter_end) {
+        std::string_view result = *string;
+        *string = "";
+        return result;
+    }
+
+    size_t segment_size = current - begin;
+    current += delimiter.size();
+
+    size_t remainder_size = string_end - current;
+    *string = std::string_view(current, remainder_size);
+
+    return std::string_view(begin, segment_size);
+}
+
 Value builtin_string_split(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
-    return Value();
+    ARGCK("string_split", 1, 2);
+
+    const Value& string_value = args[0];
+    if (!string_value.typeck(Value::Kind::String, error))
+        return Value();
+    std::string_view string = std::string_view(string_value.as_string());
+
+    std::string_view delimiter = " ";
+    if (args.size() > 1) {
+        const Value& delimiter_value = args[1];
+        if (!delimiter_value.typeck(Value::Kind::String, error))
+            return Value();
+        delimiter = delimiter_value.as_string();
+    }
+
+    std::vector<Value> result;
+    while (string.length()) {
+        std::string_view segment = chop_by_delim(&string, delimiter);
+        result.push_back(Value(nullptr, std::string(segment)));
+    }
+
+    return Value(nullptr, std::move(result));
 }
 
 Value builtin_defined(Scope* scope, Error* error, const Span& call_span, const ListNode& args) {

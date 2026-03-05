@@ -1,5 +1,5 @@
 X assert
-_ exec_script (TODO: PathIO)
+_ exec_script (TODO: PathIO, subprocess)
 _ filter_exclude (TODO: patterns)
 _ filter_include (TODO: patterns)
 _ filter_labels_exclude (TODO: patterns)
@@ -9,7 +9,7 @@ _ get_label_info
 _ get_path_info
 _ get_target_outputs
 X getenv
-_ import (TODO: FileIo)
+_ import (TODO: Path/FileIO)
 _ label_matches (TODO: patterns)
 X len
 * not_needed
@@ -20,11 +20,11 @@ _ process_file_template (TODO: Tool variable expansions)
 _ read_file (TODO: PathIO, Value Conversion)
 _ rebase_path (TODO: PathIO)
 _ set_defaults (TODO: Buildfile Targets)
-* split_list
+X split_list
 _ string_hash (TODO: Sha265)
 * string_join
 * string_replace
-* string_split
+X string_split
 _ write_file (TODO: PathIO, Value Conversion)
 * defined
 X foreach

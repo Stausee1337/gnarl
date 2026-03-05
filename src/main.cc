@@ -15,7 +15,18 @@ foreach(i, x) {
     assert(i != "pear", "Pear can't be here")
 }
 
-print(len(1337))
+os_path = getenv("PATH")
+
+print(len(os_path))
+print(os_path)
+
+paths = string_split(os_path, ":")
+print(paths, len(paths))
+chunked = split_list(paths, 3)
+print(chunked)
+print(len(chunked[0]))
+print(len(chunked[1]))
+print(len(chunked[2]))
 
 )a";
 

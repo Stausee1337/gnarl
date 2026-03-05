@@ -24,7 +24,6 @@ namespace gnarl {
     LFF(not_needed)                         \
     LFF(print)                              \
     LFF(split_list)                         \
-    LFF(string_hash)                        \
     LFF(string_join)                        \
     LFF(string_replace)                     \
     LFF(string_split)                       \

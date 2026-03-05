@@ -158,18 +158,17 @@ void generic_accessor(CONTEXT,
 
     switch (value->kind()) {
         case Value::Kind::List:
-            if (is_subscript)
+            if (is_subscript) {
                 access_list<MUT>(scope, error, value->as_list(), *accessor.subscript(), result);
+                return;
+            }
             break;
         case Value::Kind::Scope:
             access_scope<MUT>(scope, error, value->as_scope(), accessor, is_subscript, result);
-            break;
+            return;
         default:
             break;
     }
-
-    if (error->has_error())
-        return;
 
     if (is_subscript)
         *error = Error(
