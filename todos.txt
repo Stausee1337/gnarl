@@ -1,8 +1,10 @@
 TODO:
- - implement remaining simple functions
- - lex expression string interpolation (e.g. "${a.b}")
+ X implement remaining simple functions
+ X lex/parse/eval expression string interpolation (e.g. "${a.b}")
  - error formatting (+ span bug fixes)
+ - output parse trees as formatted GN code
  - buildfile target declarations
+ - testing (behavioural correctness tests + unit?)
 
 Functions:
  X assert

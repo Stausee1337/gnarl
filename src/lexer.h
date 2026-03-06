@@ -19,6 +19,8 @@ public:
     static std::vector<Token> lex_to_buffer(
             const InputFile& input_file, Error* error);
 
+    static std::vector<Token> sublex_to_buffer(const Position& start, std::string_view data, Error* error);
+
 private:
     Lexer(const InputFile& input_file, Error* error)
         : error(error),
@@ -53,7 +55,7 @@ private:
     char m_current = 0;
 
     uint32_t lineno = 1;
-    size_t bol = 0;
+    ssize_t bol = 0;
     size_t tok_start = 0;
     size_t m_position = 0;
 

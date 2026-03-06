@@ -3,6 +3,8 @@
 #include <string>
 #include <variant>
 #include "error.h"
+#include "lexer.h"
+#include "parser.h"
 #include "token.h"
 #include "value.h"
 #include "scope.h"
@@ -466,7 +468,30 @@ std::string expand_string_literal(const Token& token, const Scope* scope, Error*
             break;
             case StringParser::Segment::INTERPOLATED_EXPR:
             {
-                ABORT("not implemented");
+                std::string_view data = seg.string();
+                std::vector<Token> tokens =  Lexer::sublex_to_buffer(seg.span().start(), data, error);
+                if (error->has_error())
+                    return std::string();
+
+                // FIXME: some error messages in the parser refer to "file", retwrite to file/input
+                // depending on a call to `parse`/`parse_expression` accordingly
+                std::unique_ptr<BaseNode> expression = Parser::parse_expression(tokens, error);
+                if (error->has_error())
+                    return std::string();
+
+                if (!(expression->as_identifier() || expression->as_accessor())) {
+                    *error = Error(seg.span(),
+                                   "Invalid string interpolation",
+                                   "The thing inside the ${} must be an identifier ${foo},\n"
+                                   "a scope accesss ${foo.bar} or a list access ${foo[0]}."); 
+                    return std::string();
+                }
+
+                Value value = expression->evaluate(const_cast<Scope*>(scope), error);
+                if (error->has_error())
+                    return std::string();
+
+                result << value.stringify();
             }
             break;
             default:

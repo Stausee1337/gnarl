@@ -9,7 +9,7 @@
 namespace gnarl {
 
 void Lexer::lex(std::vector<Token>& buffer) {
-    bump();
+    m_current = source[m_position];
 
     while (true) {
         Token tok = lex_one_token();
@@ -306,6 +306,24 @@ std::vector<Token> Lexer::lex_to_buffer(const InputFile& input_file, Error* erro
 
     Lexer lexer(input_file, error);
     lexer.lex(buffer);
+    return buffer;
+}
+
+
+std::vector<Token> Lexer::sublex_to_buffer(const Position& start, std::string_view data, Error* error) {
+    std::vector<Token> buffer;
+    if (data.empty()) return buffer;
+
+    DCHECK(start.file());
+    Lexer lexer(*start.file(), error);
+    lexer.source = data;
+    lexer.lineno = start.lineno();
+    lexer.bol    = -start.column(); // FIXME: very hacky hack 
+                                    // (a better way might be to find the offset 
+                                    // of data within the full source file string)
+
+    lexer.lex(buffer);
+    DCHECK(lexer.lineno == start.lineno());
     return buffer;
 }
 

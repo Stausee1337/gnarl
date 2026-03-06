@@ -8,11 +8,12 @@
 
 int main() {
     auto source = R"a(
-
 scope = { a = 32
 x = 42 }
 
-not_needed(scope, "*", ["bar"])
+print(scope)
+
+print("Hello, ${[}!")
 
 )a";
 
