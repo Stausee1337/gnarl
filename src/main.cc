@@ -9,8 +9,12 @@
 int main() {
     auto source = R"a(
 
-scope = { x = 42 }
-print(defined(scope[1337]))
+scope = { a = 32
+x = 42 }
+
+a = 42
+forward_variables_from(scope, ["a", "x"])
+print(a)
 
 )a";
 

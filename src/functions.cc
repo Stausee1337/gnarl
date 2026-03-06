@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <sstream>
 #include <string.h>
 #include <unordered_map>
@@ -80,7 +81,91 @@ Value builtin_assert(Scope* scope, Error* error, const Span& call_span, const st
     return Value();
 }
 
+bool extract_variables_list_or_star(const Value& raw_value,
+                                    Error* error,
+                                    std::vector<std::string>* variables_list,
+                                    bool* is_wildcard) {
+    if (raw_value.kind() != Value::Kind::String && raw_value.kind() != Value::Kind::List)
+        return false;
+
+    if (raw_value.kind() == Value::Kind::String) {
+        if (raw_value.as_string() != "*") return false;
+        *is_wildcard = true;
+        return true;
+    }
+
+    *is_wildcard = false;
+
+    const std::vector<Value>& list = raw_value.as_list();
+    for (const auto& v : list) {
+        if (!v.typeck(Value::Kind::String, error))
+            return false;
+        variables_list->push_back(v.as_string());
+    }
+
+    return true;
+}
+
 Value builtin_forward_variables_from(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("forward_variables_from", 2, 3);
+
+    const Value& from_scope_value = args[0];
+    if (!from_scope_value.typeck(Value::Kind::Scope, error))
+        return Value();
+    const Scope& from_scope = from_scope_value.as_scope();
+
+    const Value& variables_list_or_star_value = args[1];
+    Span variables_list_or_star_span = variables_list_or_star_value.origin() ? *variables_list_or_star_value.origin() : call_span;
+    bool is_wildcard = false;
+    std::vector<std::string> variables_list;
+    if (!extract_variables_list_or_star(variables_list_or_star_value, error, &variables_list, &is_wildcard)) {
+        if (error->has_error())
+            return Value();
+        *error = Error(variables_list_or_star_span,
+                       "Not a valid list of variables to copy",
+                       "Expecting either the string \"*\" or a list of strings");
+        return Value();
+    }
+
+    std::vector<std::string> exclude_filter;
+    if (args.size() > 2) {
+        const Value& variables_to_not_forward_value = args[2];
+        if (!variables_to_not_forward_value.typeck(Value::Kind::List, error))
+            return Value();
+        const std::vector<Value>& list = variables_to_not_forward_value.as_list();
+        for (const auto& v : list) {
+            if (!v.typeck(Value::Kind::String, error))
+                return Value();
+            exclude_filter.push_back(v.as_string());
+        }
+    }
+
+    Scope::ValueMap from_scope_values = from_scope.get_values();
+    for (const auto& p : from_scope_values) {
+        std::vector<std::string>::const_iterator result = std::find(variables_list.begin(), variables_list.end(), p.first);
+        if (!(is_wildcard || result != variables_list.end()))
+            continue;
+
+        if (std::find(exclude_filter.begin(), exclude_filter.end(), p.first) != exclude_filter.end())
+            continue;
+
+        if (!is_wildcard && scope->has_value(p.first)) {
+            size_t idx = result - variables_list.begin();
+            const Value& name_value = variables_list_or_star_value.as_list()[idx];
+            Span name_span = name_value.origin() ? *name_value.origin() : variables_list_or_star_span;
+            *error = Error(name_span,
+                           "Clobbering existing value",
+                           "The current scope already defines a value \"" + std::string(p.first) + "\".\n"
+                           "forward_variables_from() won't clobber existing values. If you want to\n"
+                           "merge lists you'll need to do that explicitly.");
+            const Value& clobbered_value = p.second;
+            if (clobbered_value.origin())
+                error->append_suberror(Error(*clobbered_value.origin(), "value being clobbered"));
+            return Value();
+        }
+
+        scope->set_value(p.first, Value(p.second));
+    }
 
     return Value();
 }
