@@ -30,7 +30,7 @@ const Value* Scope::get_value(std::string_view name, bool counts_as_used) const 
 
 Value* Scope::get_value_mutable(std::string_view name) {
     ValueInfoMap::iterator found_value = m_values.find(name);
-    if (found_value == m_values.end()) {
+    if (found_value != m_values.end()) {
         ValueInfo& info = found_value->second;
         info.used = true;
         return &info.value;
@@ -38,6 +38,14 @@ Value* Scope::get_value_mutable(std::string_view name) {
     if (m_mutable_parent)
         return m_mutable_parent->get_value_mutable(name);
     return nullptr;
+}
+
+void Scope::mark_as_used(std::string_view name) const {
+    Scope& self = *const_cast<Scope*>(this);
+    ValueInfoMap::iterator found_value = self.m_values.find(name);
+    DCHECK(found_value != self.m_values.end());
+    ValueInfo& info = found_value->second;
+    info.used = true;
 }
 
 void Scope::set_value(std::string_view name, Value&& value) {

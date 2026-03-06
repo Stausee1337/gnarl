@@ -12,9 +12,7 @@ int main() {
 scope = { a = 32
 x = 42 }
 
-a = 42
-forward_variables_from(scope, ["a", "x"])
-print(a)
+not_needed(scope, "*", ["bar"])
 
 )a";
 

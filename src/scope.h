@@ -26,6 +26,7 @@ public:
     bool has_value(std::string_view name) const;
     const Value* get_value(std::string_view name, bool counts_as_used = true) const;
     Value* get_value_mutable(std::string_view name);
+    void mark_as_used(std::string_view name) const;
 
     void set_value(std::string_view name, Value&& value);
 

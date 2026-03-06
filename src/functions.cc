@@ -130,8 +130,13 @@ Value builtin_forward_variables_from(Scope* scope, Error* error, const Span& cal
     std::vector<std::string> exclude_filter;
     if (args.size() > 2) {
         const Value& variables_to_not_forward_value = args[2];
-        if (!variables_to_not_forward_value.typeck(Value::Kind::List, error))
+        if (variables_to_not_forward_value.kind() != Value::Kind::List) {
+            Span span = variables_to_not_forward_value.origin() ? *variables_to_not_forward_value.origin() : call_span;
+            *error = Error(span,
+                           "Not a valid list of variables to exclude",
+                           "Expecting a list of strings");
             return Value();
+        }
         const std::vector<Value>& list = variables_to_not_forward_value.as_list();
         for (const auto& v : list) {
             if (!v.typeck(Value::Kind::String, error))
@@ -209,8 +214,66 @@ Value builtin_len(Scope* scope, Error* error, const Span& call_span, const std::
     }
 }
 
-Value builtin_not_needed(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+Value builtin_not_needed_impl(Error* error, 
+                              const Span& call_span,
+                              const Scope& target_scope,
+                              const std::vector<Value>& args) {
+    if (args.size() < 1) {
+        *error = Error(call_span,
+                       "Wrong number of arguments",
+                       "The first argument is a scope, expecting two or three arguments");
+
+        return Value();
+    }
+
+    const Value& variables_list_or_star_value = args[0];
+    Span variables_list_or_star_span = variables_list_or_star_value.origin() ? *variables_list_or_star_value.origin() : call_span;
+    bool is_wildcard = false;
+    std::vector<std::string> variables_list;
+    if (!extract_variables_list_or_star(variables_list_or_star_value, error, &variables_list, &is_wildcard)) {
+        if (error->has_error())
+            return Value();
+        *error = Error(variables_list_or_star_span,
+                       "Not a valid list of variables",
+                       "Expecting either the string \"*\" or a list of strings");
+        return Value();
+    }
+
+    std::vector<std::string> exclude_filter;
+    if (args.size() > 1) {
+        const Value& variables_to_ignore_value = args[1];
+        if (variables_to_ignore_value.kind() != Value::Kind::List) {
+            Span span = variables_to_ignore_value.origin() ? *variables_to_ignore_value.origin() : call_span;
+            *error = Error(span,
+                           "Not a valid list of variables to exclude",
+                           "Expecting a list of strings");
+            return Value();
+        }
+        const std::vector<Value>& list = variables_to_ignore_value.as_list();
+        for (const auto& v : list) {
+            if (!v.typeck(Value::Kind::String, error))
+                return Value();
+            exclude_filter.push_back(v.as_string());
+        }
+    }
+
+    for (const auto& v : variables_list) {
+        if (target_scope.has_value(v))
+            target_scope.mark_as_used(v);
+    }
+
     return Value();
+}
+
+Value builtin_not_needed(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("not_needed", 1, 3);
+
+    if (args[0].kind() == Value::Kind::Scope) {
+        const Scope& target_scope = args[0].as_scope();
+        std::vector<Value> argscpy(args.begin() + 1, args.end());
+        return builtin_not_needed_impl(error, call_span, target_scope, argscpy);
+    }
+    return builtin_not_needed_impl(error, call_span, *scope, args);
 }
 
 Value builtin_print(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
