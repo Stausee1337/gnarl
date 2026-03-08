@@ -57,7 +57,7 @@ public:
         data->suberrors.push_back(suberror);
     }
 
-    // void print_to_stdout() const;
+    void print_to_stdout() const;
 
 private:
     struct Data {
