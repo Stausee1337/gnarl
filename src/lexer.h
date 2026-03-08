@@ -40,7 +40,7 @@ private:
 
     Token make_token(TokenKind kind) const;
 
-    uint32_t column() const { return position() - bol; }
+    uint32_t column() const { return (position() - bol) + 1; }
     Position current_position() const;
     Span token_span() const;
     bool at_start_of_line(size_t offset) const;

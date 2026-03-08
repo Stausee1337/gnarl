@@ -1,9 +1,11 @@
 TODO:
  X implement remaining simple functions
  X lex/parse/eval expression string interpolation (e.g. "${a.b}")
- - error formatting (+ span bug fixes)
+ X error formatting (+ span bug fixes)
+ - buildfile target declarations (traget, template, etc)
+ - Path/FileIO
+ - try running against skia (as dependency)
  - output parse trees as formatted GN code
- - buildfile target declarations
  - testing (behavioural correctness tests + unit?)
 
 Functions:

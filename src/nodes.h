@@ -182,6 +182,7 @@ class ConditionalNode final : public BaseNode {
 public:
     ConditionalNode(const Token& token, std::unique_ptr<BaseNode>&& condition, std::unique_ptr<BlockNode>&& if_branch)
         : m_tok(token),
+        m_condition(std::move(condition)),
         m_if_branch(std::move(if_branch))
     {}
 
@@ -206,7 +207,7 @@ public:
 private:
 
     Token m_tok;
-    std::unique_ptr<BlockNode> m_condition;
+    std::unique_ptr<BaseNode> m_condition;
     std::unique_ptr<BlockNode> m_if_branch;
     std::unique_ptr<BaseNode> m_else_branch;
 };

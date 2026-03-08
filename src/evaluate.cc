@@ -488,7 +488,13 @@ const BaseNode* ListNode::operator[](size_t index) const {
 
 Value UnaryOpNode::evaluate(CONTEXT) const {
     DCHECK(m_tok.kind() == TokenKind::Bang);
-    return EVAL2VAL(*m_operand, Value());
+    Value value = EVAL2VAL(*m_operand, Value());
+    if (value.kind() == Value::Kind::Boolean)
+        return Value(this, !value.as_boolean());
+    *error = Error(get_span(),
+                   "Operand of ! operator is not a boolean",
+                   "Type is \"" + std::string(Value::type_name(value)) + "\" instead.");
+    return Value();
 }
 
 void BaseNode::evaluate_set(CONTEXT, Value value) const {

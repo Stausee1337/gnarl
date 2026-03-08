@@ -243,7 +243,8 @@ Token Lexer::lex_number_literal() {
 
 Token Lexer::make_token(TokenKind kind) const {
     std::string_view data(source.data() + tok_start + 1, position() - tok_start);
-    return Token(kind, data, current_position());
+    Position token_start(&input_file, lineno, (tok_start - bol) + 1);
+    return Token(kind, data, token_start);
 }
 
 Position Lexer::current_position() const {
@@ -251,7 +252,7 @@ Position Lexer::current_position() const {
 }
 
 Span Lexer::token_span() const {
-    Position token_start(&input_file, lineno, tok_start - bol);
+    Position token_start(&input_file, lineno, (tok_start - bol) + 1);
     return Span(token_start, current_position());
 }
 

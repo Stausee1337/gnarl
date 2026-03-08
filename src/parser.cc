@@ -117,8 +117,11 @@ std::unique_ptr<BaseNode> Parser::parse_statement() {
     std::unique_ptr<BaseNode> expression = parse_expression();
     if (expression && (expression->as_function_call() || is_assignment(expression.get())))
         return expression;
+    if (error->has_error())
+        return std::unique_ptr<BaseNode>();
 
-    *error = Error(expression.get(), "Expecting assignment or function call");
+    *error = Error(!is_eof() ? current().span() : buffer.back().span(),
+                  "Expecting assignment or function call");
     return std::unique_ptr<BaseNode>();
 }
 
