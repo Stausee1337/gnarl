@@ -10,10 +10,10 @@
 #include "scope.h"
 #include "nodes.h"
 #include "assertions.h"
+#include "integer.h"
 
 namespace gnarl {
     
-bool i64_from_ascii(const char* begin, size_t length, int64_t* result);
 std::string expand_string_literal(const Token& token, const Scope* scope, Error* error);
 
 Value LiteralNode::evaluate(Scope* scope, Error* error) const {
@@ -51,82 +51,6 @@ Value LiteralNode::evaluate(Scope* scope, Error* error) const {
             ABORT("invalid token kind in LiteralNode");
     }
 }
-
-// Integer parsing algorithm adapted for C++ from:
-// https://github.com/rust-lang/rust/blob/b935f37/library/core/src/num/mod.rs#L1708
-
-#define len ((size_t)(end - begin))
-
-template<typename Derived>
-struct IntegerParser {
-    static bool parse(const char* begin, size_t length, int64_t* out_result) {
-        const char* end = begin + length;
-
-        int64_t result = 0;
-
-        bool cannot_overflow = len <= sizeof(int64_t) * 2 - 1;
-        if (cannot_overflow) {
-            while (begin != end) {
-                char c = *(begin++);
-                if (c < '0' || c > '9') return false;
-
-                result *= 10;
-                result = Derived::addition(result, c - '0');
-            }
-        } else {
-            while (begin != end) {
-                char c = *(begin++);
-                if (c < '0' || c > '9') return false;
-
-                if (__builtin_mul_overflow(result, 10, &result)) return false;
-                if (Derived::checked_addition(result, c - '0', &result)) return false;
-            }
-        }
-
-        *out_result = result;
-        return true;
-    }
-};
-
-struct Positive : public IntegerParser<Positive> {
-    static int64_t addition(int64_t a, int64_t b) {
-        return a + b;
-    }
-
-    static bool checked_addition(int64_t a, int64_t b, int64_t* result) {
-        return __builtin_add_overflow(a, b, result);
-    }
-};
-
-struct Negative : public IntegerParser<Negative> {
-    static int64_t addition(int64_t a, int64_t b) {
-        return a - b;
-    }
-
-    static bool checked_addition(int64_t a, int64_t b, int64_t* result) {
-        return __builtin_sub_overflow(a, b, result);
-    }
-};
-
-bool i64_from_ascii(const char* begin, size_t length, int64_t* result) {
-    if (length == 0) return false;
-    const char* end = begin + length;
-
-
-    bool is_positive = true;
-    if (*begin == '+' || *begin == '-') {
-        is_positive = *begin != '-';
-        begin++;
-    }
-
-    if (len == 0) return false;
-
-    if (is_positive)
-        return Positive::parse(begin, len, result);
-    else
-        return Negative::parse(begin, len, result);
-}
-#undef len
 
 bool hexdigit(char c, char* result) {
     if (c >= '0' && c <= '9') {

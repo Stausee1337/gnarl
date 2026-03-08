@@ -15,6 +15,7 @@ static_library(
         'src/evaluate.cc',
         'src/literals.cc',
         'src/functions.cc',
+        'src/integer.cc',
     ],
 )
 
