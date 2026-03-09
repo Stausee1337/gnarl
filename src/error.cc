@@ -1,4 +1,5 @@
 
+#include <algorithm>
 #include <memory>
 
 #include "error.h"
@@ -35,10 +36,11 @@ void Error::print_to_stdout() const {
 
     const InputFile* file = position().file();
 
-    // TODO: format differently if file is null (aka there's no position)
     if (file == nullptr) {
         print("ERROR: {}\n", message());
-        DCHECK(file != nullptr);
+        if (help().size())
+            print("{}\n", help());
+        return;
     }
 
     print("ERROR at {}:{}:{}: {}\n", 
@@ -65,6 +67,7 @@ void Error::print_to_stdout() const {
     if (help().size())
         print("{}\n", help());
 
+    // TODO: print suberrors
 }
 
 }

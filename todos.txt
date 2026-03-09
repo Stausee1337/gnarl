@@ -5,6 +5,7 @@ TODO:
  - buildfile target declarations (traget, template, etc)
  - Path/FileIO
  - try running against skia (as dependency)
+ - colored error output
  - output parse trees as formatted GN code
  - testing (behavioural correctness tests + unit?)
 
