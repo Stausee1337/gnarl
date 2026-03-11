@@ -4,6 +4,7 @@ includes += ["./src"]
 static_library(
     name = 'gnarl_lib',
     sources = [
+        'src/workspace.cc',
         'src/error.cc',
         'src/assertions.cc',
         'src/commandline.cc',
@@ -12,6 +13,7 @@ static_library(
         'src/nodes.cc',
         'src/value.cc',
         'src/scope.cc',
+        'src/file_scope.cc',
         'src/evaluate.cc',
         'src/literals.cc',
         'src/functions.cc',

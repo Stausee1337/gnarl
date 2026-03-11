@@ -9,11 +9,13 @@
 
 namespace gnarl {
 
-class Scope final {
+class Workspace;
+class FileScope;
+
+class Scope {
 public:
     using ValueMap = std::map<std::string_view, Value>;
 
-    Scope() = default;
     Scope(Scope* parent);
     Scope(const Scope* parent);
 
@@ -21,6 +23,8 @@ public:
     Scope& operator=(const Scope&) = default;
 
     const Scope* parent() const;
+    const FileScope* file() const;
+    // NOTE: detatch_from_parent must not be used with `FileScope`s
     void detatch_from_parent();
 
     bool has_value(std::string_view name) const;
@@ -34,7 +38,14 @@ public:
 
     bool equals_current_values(const Scope& other) const;
 
+protected:
+    const FileScope* m_file = nullptr;
+
 private:
+    friend class Workspace;
+
+    Scope() = default;
+
     struct ValueInfo {
         Value value;
         bool used;

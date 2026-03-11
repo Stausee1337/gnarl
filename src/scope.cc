@@ -4,10 +4,16 @@
 namespace gnarl {
 
 Scope::Scope(Scope* parent) : m_mutable_parent(parent)
-{}
+{
+    if (parent->m_file)
+        m_file = parent->m_file;
+}
 
 Scope::Scope(const Scope* parent) : m_const_parent(parent)
-{}
+{
+    if (parent->m_file)
+        m_file = parent->m_file;
+}
 
 bool Scope::has_value(std::string_view name) const {
     ValueInfoMap::const_iterator found_value = m_values.find(name);
@@ -58,8 +64,10 @@ const Scope* Scope::parent() const {
 }
 
 void Scope::detatch_from_parent() {
+    DCHECK((void*)m_file != this);
     m_mutable_parent = nullptr;
     m_const_parent = nullptr;
+    m_file = nullptr;
 }
 
 Scope::ValueMap Scope::get_values() const {

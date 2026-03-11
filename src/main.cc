@@ -1,10 +1,12 @@
 #include <iostream>
 
 #include "error.h"
+#include "workspace.h"
 #include "input_file.h"
 #include "lexer.h"
 #include "parser.h"
 #include "scope.h"
+#include "file_scope.h"
 #include "format.h"
 
 gnarl::Value do_run_file(const gnarl::InputFile& file, gnarl::Error* error) {
@@ -14,12 +16,14 @@ gnarl::Value do_run_file(const gnarl::InputFile& file, gnarl::Error* error) {
     std::unique_ptr<gnarl::BaseNode> expr = gnarl::Parser::parse(token_buffer, error);
     if (error->has_error()) return gnarl::Value();
 
-    std::unique_ptr<gnarl::Scope> scope = std::make_unique<gnarl::Scope>();
+    gnarl::Workspace workspace(gnarl::Workspace::Options{});
+    std::unique_ptr<gnarl::Scope> scope = std::make_unique<gnarl::FileScope>(&workspace);
     return expr->evaluate(scope.get(), error);
 }
 
 int main() {
     auto source = R"a(
+print(gnarl_version)
 scope = { a = 32
 x = 42 }
 
