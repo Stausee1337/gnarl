@@ -8,6 +8,7 @@
 #include "scope.h"
 #include "file_scope.h"
 #include "format.h"
+#include "path_io.h"
 
 gnarl::Value do_run_file(const gnarl::InputFile& file, gnarl::Error* error) {
     std::vector<gnarl::Token> token_buffer = gnarl::Lexer::lex_to_buffer(file, error);
@@ -42,7 +43,7 @@ print("Hello, ${scope.a}!")
         return 1;
     }
 
-    // gnarl::print("{:#>$}\n", "test", 3);
+    gnarl::print("{}\n", gnarl::normalize("//../a/b/c", "/home/MISC/stausee1337"));
 
     return 0;
 }

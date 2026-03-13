@@ -20,6 +20,7 @@ static_library(
         'src/input_file.cc',
         'src/format.cc',
         'src/integer.cc',
+        'src/path_io.cc',
     ],
 )
 

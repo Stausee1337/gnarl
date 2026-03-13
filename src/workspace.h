@@ -20,6 +20,7 @@ private:
     // contians all global variables
     const Scope* m_globals;
 
+    // FileManager m_file_manager;
     // ImportManager m_import_manager;
     // TargetManager m_target_manager;
 };
