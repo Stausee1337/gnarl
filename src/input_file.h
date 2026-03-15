@@ -13,6 +13,9 @@ public:
     InputFile(const InputFile&) = delete;
     const InputFile& operator=(const InputFile&) = delete;
 
+    InputFile(InputFile&&) = default;
+    InputFile& operator=(InputFile&&) = default;
+
     bool is_empty() const {
         return m_source.empty();
     }

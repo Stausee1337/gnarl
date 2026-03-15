@@ -21,12 +21,13 @@ static_library(
         'src/format.cc',
         'src/integer.cc',
         'src/path_io.cc',
+        'src/file_manager.cc',
     ],
 )
 
 executable(
     name = 'gnarl',
-    sources = [ 'src/main.cc' ],
+    sources = [ 'src/gnarl.cc', 'src/main.cc' ],
     deps = [ ':gnarl_lib' ],
 )
 

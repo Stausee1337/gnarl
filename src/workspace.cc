@@ -10,7 +10,8 @@ void setup_gnarl_globals(Scope* globals) {
     globals->set_value("gnarl_version", Value(nullptr, (int64_t)100)); 
 }
 
-Workspace::Workspace(Workspace::Options options) {
+Workspace::Workspace(Workspace::Options options)
+    : m_file_manager(options.source_dir) {
     Scope* globals;
     m_globals = globals = new Scope();
     setup_gnarl_globals(globals);

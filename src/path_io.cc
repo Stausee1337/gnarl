@@ -24,6 +24,10 @@ public:
             : kind(kind),
             data(data)
         {}
+
+        bool operator==(Component& other) {
+            return kind == other.kind && data == other.data;
+        }
     
         Kind kind;
         std::string_view data;
@@ -136,6 +140,11 @@ do_parse:
         normalized.insert(normalized.end(), iterator->data.begin(), iterator->data.end());
     }
     return normalized;
+}
+
+bool is_absolute(std::string_view path) {
+    // TODO: windows
+    return path.size() >= 1 && path[0] == '/';
 }
 
 }

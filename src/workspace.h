@@ -2,6 +2,9 @@
 #ifndef GNARL_WORKSPACE_H_
 #define GNARL_WORKSPACE_H_
 
+#include <string>
+#include "file_manager.h"
+
 namespace gnarl {
 
 class Scope;
@@ -9,18 +12,20 @@ class Scope;
 class Workspace final {
 public:
     struct Options {
-
+        std::string source_dir;
     };
 
     Workspace(Options options);
 
     const Scope* globals() const { return m_globals; }
+
+    FileManager* file_manager() { return &m_file_manager; }
 private:
 
     // contians all global variables
     const Scope* m_globals;
 
-    // FileManager m_file_manager;
+    FileManager m_file_manager;
     // ImportManager m_import_manager;
     // TargetManager m_target_manager;
 };

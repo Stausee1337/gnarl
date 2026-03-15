@@ -1,5 +1,4 @@
 
-
 #ifndef GNARL_PATH_IO_H_
 #define GNARL_PATH_IO_H_
 
