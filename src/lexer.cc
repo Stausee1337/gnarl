@@ -61,10 +61,10 @@ Token Lexer::lex_one_token() {
 Token Lexer::lex_comment() {
     bump();
     char c = current();
-    do {
+    while (c != '\n' && c != '\r' && !is_eof()) {
         bump();
         c = current();
-    } while (c != '\n' && c != '\r' && !is_eof());
+    }
 
     TokenKind kind = TokenKind::SuffixComment;
 
@@ -75,10 +75,14 @@ Token Lexer::lex_comment() {
             || previous->position().lineno() + 1 != lineno
             || previous->position().column() != column())) {
         kind = TokenKind::LineComment;
-        if (!is_eof())
+        if (!is_eof()) { // \n or \r
+            if (c == '\r' && next() == '\n')
+                bump();
+            lineno++;
+            bol = position() + 1;
             bump();
+        }
 
-        char c = current();
         while (isspace(c)) {
             if (c == '\r' || c == '\n') {
                 kind = TokenKind::BlockComment;
@@ -242,7 +246,7 @@ Token Lexer::lex_number_literal() {
 }
 
 Token Lexer::make_token(TokenKind kind) const {
-    std::string_view data(source.data() + tok_start + 1, position() - tok_start);
+    std::string_view data(source.data() + tok_start, position() - tok_start);
     Position token_start(&input_file, lineno, (tok_start - bol) + 1);
     return Token(kind, data, token_start);
 }
@@ -258,6 +262,7 @@ Span Lexer::token_span() const {
 
 bool Lexer::at_start_of_line(size_t offset) const {
     DCHECK(offset <= source.length());
+    if (offset == 0) return true;
     while (offset > 0) {
         char c = source[--offset];
         if (c == '\n')

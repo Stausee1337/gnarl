@@ -49,7 +49,7 @@ private:
     bool is_eof() const;
     char next() const;
 
-    size_t position() const { return m_position - 1; }
+    size_t position() const { return m_position; }
     char current() const { return m_current; }
 
     char m_current = 0;
