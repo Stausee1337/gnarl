@@ -127,8 +127,9 @@ std::unique_ptr<BaseNode> Parser::parse_statement() {
 
 std::unique_ptr<BaseNode> Parser::parse_conditional() {
     const Token& token = bump();
-    if (!expect(TokenKind::LParen, "Expected '(' after 'if'"))
+    if (!expect(TokenKind::LParen, "Expected '(' after 'if'")) {
         return std::unique_ptr<BaseNode>();
+    }
 
     std::unique_ptr<BaseNode> condition = parse_expression();
     if (error->has_error())
@@ -390,6 +391,8 @@ std::unique_ptr<ListNode> Parser::parse_comma_seperated_list(TokenKind end_token
 }
 
 const Token& Parser::bump() {
+    DCHECK(buffer.size());
+
     if (cursor >= (ssize_t)buffer.size())
         ABORT("bump() on eof parser");
 
@@ -408,8 +411,6 @@ const Token& Parser::bump() {
                 break;
         }
     } while (current_kind == TokenKind::LineComment || current_kind == TokenKind::SuffixComment);
-
-    // std::cout << "Bump: " << current().value() << "\n";
 
     return old_token;
 }
