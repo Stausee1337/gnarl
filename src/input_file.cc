@@ -12,9 +12,13 @@ InputFile::InputFile(std::string path, std::string source)
 std::string_view InputFile::get_line(size_t lineno) const {
     DCHECK(lineno > 0 && lineno <= m_lines.size());
     size_t offset = m_lines[lineno - 1];
-    size_t length = m_lines[lineno] - offset;
+    size_t length;
+    if (lineno < m_lines.size())
+        length = m_lines[lineno] - offset;
+    else
+        length = m_source.length() - offset;
 
-    DCHECK((offset + length) < m_source.size());
+    DCHECK((offset + length) <= m_source.size());
     std::string_view view(m_source.data() + offset, length);
 
     while (view.length()) {
