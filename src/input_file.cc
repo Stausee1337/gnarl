@@ -3,7 +3,7 @@
 
 namespace gnarl {
 
-InputFile::InputFile(std::string path, std::string source)
+InputFile::InputFile(Path path, std::string source)
     : m_path(path),
     m_source(source) {
     analyze_lines();

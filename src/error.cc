@@ -44,7 +44,7 @@ void Error::print_to_stdout() const {
     }
 
     print("ERROR at {}:{}:{}: {}\n", 
-            file->path(),
+            file->path().string(),
             position().lineno(),
             position().column(),
             message()

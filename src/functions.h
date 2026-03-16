@@ -20,6 +20,7 @@ namespace gnarl {
     LFF(assert)                             \
     LFF(forward_variables_from)             \
     LFF(getenv)                             \
+    LFF(import)                             \
     LFF(len)                                \
     LFF(not_needed)                         \
     LFF(print)                              \

@@ -9,6 +9,7 @@
 #include "value.h"
 #include "scope.h"
 #include "functions.h"
+#include "file_scope.h"
 
 namespace gnarl {
 
@@ -190,6 +191,27 @@ Value builtin_getenv(Scope* scope, Error* error, const Span& call_span, const st
         result = std::string(variable);
 
     return Value(nullptr, std::move(result));
+}
+
+Value builtin_import(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("import", 1);
+
+    const Value& path_value = args[0];
+    if (!path_value.typeck(Value::Kind::String, error))
+        return Value();
+    const std::string& path = path_value.as_string();
+
+    Span span = path_value.origin() ? *path_value.origin() : call_span;
+
+    const FileScope* file = scope->file();
+    const Workspace* workspace = file->workspace();
+    // const Scope* import_scope = workspace->import_manager()->import_from(path, file, span, call_span, error);
+    if (error->has_error()) 
+        return Value();
+
+    // scope->merge(import_scope, call_span, "import", error);
+
+    return Value();
 }
 
 Value builtin_len(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {

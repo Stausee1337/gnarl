@@ -23,7 +23,7 @@ public:
     Scope& operator=(const Scope&) = default;
 
     const Scope* parent() const;
-    const FileScope* file() const;
+    const FileScope* file() const { return m_file; }
     // NOTE: detatch_from_parent must not be used with `FileScope`s
     void detatch_from_parent();
 

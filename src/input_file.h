@@ -3,12 +3,13 @@
 
 #include <string>
 #include <vector>
+#include "path_io.h"
 
 namespace gnarl {
 
 class InputFile final {
 public:
-    InputFile(std::string path, std::string source);
+    InputFile(Path path, std::string source);
 
     InputFile(const InputFile&) = delete;
     const InputFile& operator=(const InputFile&) = delete;
@@ -24,7 +25,7 @@ public:
         return m_source;
     }
 
-    const std::string& path() const {
+    const Path& path() const {
         return m_path;
     }
 
@@ -33,7 +34,7 @@ public:
 private:
     void analyze_lines();
 
-    std::string m_path;
+    Path m_path;
     std::string m_source;
     std::vector<size_t> m_lines; 
 };

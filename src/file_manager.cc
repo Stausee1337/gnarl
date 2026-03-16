@@ -1,7 +1,6 @@
 
 #include <string.h>
 #include "error.h"
-#include "path_io.h"
 #include "file_manager.h"
 
 namespace gnarl {
@@ -9,7 +8,7 @@ namespace gnarl {
 std::string read_entire_file(const char* filename, Error* error) {
     std::string result;
 
-    FILE *file = fopen(filename, "r");
+    FILE* file = fopen(filename, "r");
     long int fsize;
 
     if (file == NULL) goto failure;
@@ -28,16 +27,14 @@ std::string read_entire_file(const char* filename, Error* error) {
 
 failure:
     *error = Error("Could not read file: " + std::string(filename) + ": " + std::string(strerror(errno)));
-
     return std::string();
 }
 
-const InputFile* FileManager::load_file(std::string_view path, Error* error) {
-    std::string absolute = normalize(path, m_source_dir);
-    std::string data = read_entire_file(absolute.c_str(), error);
+const InputFile* FileManager::load_file(Path path, Error* error) {
+    std::string data = read_entire_file(path.c_str(), error);
     if (error->has_error())
         return nullptr;
-    return &m_files.emplace_back(std::string(path), data);
+    return &m_files.emplace_back(path, data);
 }
 
 }

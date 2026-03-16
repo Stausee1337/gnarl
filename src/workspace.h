@@ -25,8 +25,10 @@ public:
     static Workspace* current();
 
     const Scope* globals() const { return m_globals; }
+    const Path& source_dir() const { return m_source_dir; }
     FileManager* file_manager() { return &m_file_manager; }
 private:
+    Path m_source_dir;
 
     // contians all global variables
     const Scope* m_globals;

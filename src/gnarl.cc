@@ -24,7 +24,7 @@ Value do_run_file(Workspace* workspace, const InputFile& file, Error* error) {
 void run_gnarl(Workspace* workspace, ExitCode* exit_code) {
     Error error;
 
-    const InputFile* entry = workspace->file_manager()->load_file("//BUILD.gn", &error);
+    const InputFile* entry = workspace->file_manager()->load_file(normalize("//BUILD.gn"), &error);
     if (entry) {
         do_run_file(workspace, *entry, &error);
     }

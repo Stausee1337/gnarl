@@ -4,99 +4,110 @@
 #include <sstream>
 #include <vector>
 #include "assertions.h"
+#include "workspace.h"
 #include "path_io.h"
 
 namespace gnarl {
 
-class PathParser {
-public:
-    struct Component {
-        enum Kind {
-            NORMAL,
-            ROOT_DIR,
-            SOURCE_DIR,
-            PARENT_DIR,
-        };
+PathParser::PathParser(std::string_view path)
+    : m_path(path),
+    m_current(path.begin())
+{}
 
-        Component() = default;
-
-        Component(Kind kind, std::string_view data)
-            : kind(kind),
-            data(data)
-        {}
-
-        bool operator==(Component& other) {
-            return kind == other.kind && data == other.data;
-        }
-    
-        Kind kind;
-        std::string_view data;
-    };
-
-    using Iterator = std::string_view::const_iterator;
-    PathParser(const std::string_view path)
-        : m_path(path),
-        m_current(path.begin())
-    {}
-
-    // TODO: a lot of windows specific path handling
-    //      - prefixes (`C:\`, `\\?\`)
-    //      - multiple seperators (`/`, `\`)
-
-    bool advance(Component& component) {
+bool PathParser::advance(Component& component) {
 repeat:
-        if (m_current >= m_path.end())
-            return false;
-        else if (m_current == m_path.begin()) {
-            if (*m_current == '/') {
-                m_current++;
-                if (m_current < m_path.end() && *m_current == '/')
-                    component = Component(Component::SOURCE_DIR, "//");
-                else
-                    component = Component(Component::ROOT_DIR, "/");
-                return true;
-            }
-        }
-        if (parse_next_component(component)) 
-            return true;
-        goto repeat;
-    }
-
-private:
-    bool parse_next_component(Component& component) {
-        Iterator start = m_current;
-        m_current = std::find(m_current, m_path.end(), '/');
-
-        std::string_view data(&*start, m_current - start);
-        if (m_current != m_path.end())
+    if (m_current >= m_path.end())
+        return false;
+    else if (m_current == m_path.begin()) {
+        if (*m_current == '/') {
             m_current++;
-
-        if (data == "") return false;
-        else if (data == ".") return false;
-        else if (data == "..") {
-            component = Component(Component::PARENT_DIR, data);
+            if (m_current < m_path.end() && *m_current == '/')
+                component = Component(Component::SOURCE_DIR, "//");
+            else
+                component = Component(Component::ROOT_DIR, "/");
             return true;
         }
-        component = Component(Component::NORMAL, data);
+    }
+    if (parse_next_component(component)) 
+        return true;
+    goto repeat;
+}
+
+bool PathParser::parse_next_component(Component& component) {
+    Iterator start = m_current;
+    m_current = std::find(m_current, m_path.end(), '/');
+
+    std::string_view data(&*start, m_current - start);
+    if (m_current != m_path.end())
+        m_current++;
+
+    if (data == "") return false;
+    else if (data == ".") return false;
+    else if (data == "..") {
+        component = Component(Component::PARENT_DIR, data);
         return true;
     }
+    component = Component(Component::NORMAL, data);
+    return true;
+}
 
-    const std::string_view m_path;
-    Iterator m_current;
-};
+Path::Path(PathView view) 
+    : m_data(view.data(), view.size())
+{ }
 
+PathParser Path::components() const {
+    return PathView(*this).components();
+}
 
-std::string normalize(std::string_view path, const std::string& source_dir) {
-    if (path.size() == 0) return "";
+Path& Path::operator+=(PathView view) {
+    if (m_data.length() > 0 && m_data.back() != '/')
+        m_data.push_back('/');
+    m_data.insert(m_data.length(), view.data(), view.size());
+    return *this;
+}
 
-    PathParser path_parser(path);
-    PathParser source_dir_parser(source_dir);
+PathView::PathView(const PathParser::Component& component) {
+    switch (component.kind) {
+        case PathParser::Component::NORMAL:
+            m_length = component.data.size();
+            m_data = component.data.data();
+            break;
+        case PathParser::Component::ROOT_DIR:
+            m_length = 1;
+            m_data = "/";
+            break;
+        case PathParser::Component::SOURCE_DIR:
+            m_length = 2;
+            m_data = "//";
+            break;
+        case PathParser::Component::PARENT_DIR:
+            m_length = 2;
+            m_data = "..";
+            break;
+    }
+}
+
+PathParser PathView::components() const {
+    return PathParser(this->string());
+}
+
+PathView source_dir() {
+    Workspace* workspace = Workspace::current();
+    DCHECK(workspace);
+    return workspace->source_dir();
+}
+
+Path normalize(PathView path) {
+    if (path.size() == 0) return Path();
+
+    PathParser path_parser = path.components();
+    PathParser source_dir_parser = source_dir().components();
 
     std::vector<PathParser::Component> components;
 
     PathParser::Component component;
     if (!path_parser.advance(component))
-        return "";
+        return Path();
 
     // TODO: maybe figure out a way to write without goto?
     PathParser* parser = &path_parser;
@@ -127,24 +138,11 @@ do_parse:
         goto do_parse;
     }
 
-    std::string normalized;
-    bool is_absolute = components[0].kind == PathParser::Component::ROOT_DIR;
+    Path normalized; 
+    for (auto& component : components)
+        normalized += component;
 
-    for (auto iterator = components.begin(); iterator != components.end(); ++iterator) {
-        if (iterator != components.begin()) {
-            if (!is_absolute)
-                normalized.push_back('/');
-            else
-                is_absolute = false;
-        }
-        normalized.insert(normalized.end(), iterator->data.begin(), iterator->data.end());
-    }
     return normalized;
-}
-
-bool is_absolute(std::string_view path) {
-    // TODO: windows
-    return path.size() >= 1 && path[0] == '/';
 }
 
 }

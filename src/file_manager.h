@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include "path_io.h"
 #include "input_file.h"
 
 namespace gnarl {
@@ -12,14 +13,11 @@ class Error;
 
 class FileManager final {
 public:
-    FileManager(std::string source_dir)
-        : m_source_dir(source_dir)
-    {}
+    FileManager() = default;
 
-    const InputFile* load_file(std::string_view path, Error* error);
+    const InputFile* load_file(Path path, Error* error);
 
 private:
-    std::string m_source_dir;
     std::vector<InputFile> m_files;
 };
 

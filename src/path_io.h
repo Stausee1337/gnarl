@@ -2,11 +2,119 @@
 #ifndef GNARL_PATH_IO_H_
 #define GNARL_PATH_IO_H_
 
+#include <string.h>
+#include <concepts>
+#include <vector>
 #include <string>
 
 namespace gnarl {
 
-std::string normalize(std::string_view path, const std::string& source_dir = std::string());
+class PathView;
+
+class PathParser {
+public:
+    struct Component {
+        enum Kind {
+            NORMAL,
+            ROOT_DIR,
+            SOURCE_DIR,
+            PARENT_DIR,
+        };
+
+        Component() = default;
+
+        Component(Kind kind, std::string_view data) : kind(kind), data(data)
+        {}
+
+        bool operator==(Component& other) const {
+            return kind == other.kind && data == other.data;
+        }
+    
+        Kind kind;
+        std::string_view data;
+    };
+
+
+    bool advance(Component& component);
+
+private:
+    friend class PathView;
+
+    using Iterator = std::string_view::const_iterator;
+    PathParser(std::string_view path);
+
+    bool parse_next_component(Component& component);
+
+    const std::string_view m_path;
+    Iterator m_current;
+};
+
+class Path final {
+public:
+    Path() = default;
+    Path(std::string_view path) : m_data(path)
+    {}
+
+    Path(PathView view);
+
+    const char* data() const { return m_data.data(); }
+    const char* c_str() const { return m_data.c_str(); }
+    size_t size() const { return m_data.size(); }
+    std::string_view string() const { return m_data; }
+
+    PathParser components() const;
+
+    Path& operator+=(PathView view);
+
+private:
+    std::string m_data;
+};
+
+class PathView final {
+public:
+    PathView(const Path& path)
+        : m_length(path.size()), m_data(path.data())
+    {}
+
+    PathView(std::string_view path)
+        : m_length(path.length()), m_data(path.data())
+    {}
+
+    PathView(const char* path)
+        : m_length(strlen(path)), m_data(path)
+    {}
+
+    PathView(const PathParser::Component& component);
+
+    size_t size() const { return m_length; }
+    const char* data() const { return m_data; }
+    std::string_view string() const { return std::string_view(m_data, m_length); }
+
+    PathParser components() const;
+
+private:
+    size_t m_length;
+    const char* m_data;
+};
+
+template<typename T>
+concept PathLike = std::convertible_to<T, PathView>;
+
+Path normalize(PathView path);
+
+template<PathLike P>
+Path normalize(P pathlike) {
+    PathView path(pathlike);
+    return normalize(path);
+}
+
+Path resolve_unique(PathView path);
+
+template<PathLike P>
+Path resolve_unique(P pathlike) {
+    PathView path(pathlike);
+    return resolve_unique(path);
+}
 
 }
 
