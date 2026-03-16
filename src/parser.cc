@@ -119,6 +119,8 @@ std::unique_ptr<BaseNode> Parser::parse_statement() {
         return expression;
     if (error->has_error())
         return std::unique_ptr<BaseNode>();
+    if (!expression)
+        return expression;
 
     *error = Error(!is_eof() ? current().span() : buffer.back().span(),
                   "Expecting assignment or function call");
@@ -179,12 +181,16 @@ std::unique_ptr<BaseNode> Parser::parse_expression(int min_prec) {
     if (error->has_error())
         return std::unique_ptr<BaseNode>();
 
+    if (is_eof())
+        return lhs;
+
     TokInfo info = expression_table[(uint)current().kind()];
 
-    while (info.infix != nullptr) {
+    while (info.infix != nullptr && !is_eof()) {
         if (info.prec < min_prec)
             break;
         lhs = (this->*(info.infix))(std::move(lhs));
+        if (is_eof()) break;
         info = expression_table[(uint)current().kind()];
     }
 
