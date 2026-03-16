@@ -10,7 +10,10 @@ int main() {
     gnarl::Workspace workspace(options);
 
     gnarl::ExitCode code;
-    gnarl::run_gnarl(&workspace, &code);
+    {
+        gnarl::Workspace::Context ctx(&workspace);
+        gnarl::run_gnarl(&workspace, &code);
+    }
 
     return code;
 }

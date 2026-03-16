@@ -17,5 +17,21 @@ Workspace::Workspace(Workspace::Options options)
     setup_gnarl_globals(globals);
 }
 
+static Workspace* current_workspace = nullptr;
+
+Workspace* Workspace::current() {
+    return current_workspace;
+}
+
+Workspace::Context::Context(Workspace* workspace) {
+    DCHECK(!current_workspace);
+    current_workspace = workspace;
+}
+
+Workspace::Context::~Context() {
+    DCHECK(current_workspace);
+    current_workspace = nullptr;
+}
+
 }
 

@@ -11,14 +11,20 @@ class Scope;
 
 class Workspace final {
 public:
+    class Context final {
+    public:
+        Context(Workspace* workspace);
+        ~Context();
+    };
+
     struct Options {
         std::string source_dir;
     };
 
     Workspace(Options options);
+    static Workspace* current();
 
     const Scope* globals() const { return m_globals; }
-
     FileManager* file_manager() { return &m_file_manager; }
 private:
 
