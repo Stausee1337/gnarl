@@ -172,6 +172,7 @@ Value builtin_forward_variables_from(Scope* scope, Error* error, const Span& cal
         }
 
         scope->set_value(p.first, Value(p.second));
+        scope->mark_as_used(p.first);
     }
 
     return Value();
@@ -209,7 +210,32 @@ Value builtin_import(Scope* scope, Error* error, const Span& call_span, const st
     if (error->has_error()) 
         return Value();
 
-    // scope->merge(import_scope, call_span, "import", error);
+    Scope::ValueMap import_scope_values = import_scope->get_values();
+    for (const auto& p : import_scope_values) {
+        Value our_value;
+        if (scope->has_value(p.first) && (our_value = *scope->get_value(p.first, false)) != p.second) {
+            *error = Error(call_span,
+                           "Value collision",
+                           "This import contains \"" + std::string(p.first) + "\"");
+            const Value& clobbered_value = p.second;
+            if (clobbered_value.origin()) {
+                error->append_suberror(Error(*clobbered_value.origin(),
+                                             "defined here",
+                                             "Which would clobber the one in your current scope"));
+                if (our_value.origin())
+                    error->append_suberror(
+                            Error(*our_value.origin(),
+                                  "defined here",
+                                  "Executing import should not conflict with anything in the current\n"
+                                  "scope unless the values are indentical"));
+            }
+            return Value(); 
+        }
+
+        scope->set_value(p.first, Value(p.second));
+        scope->mark_as_used(p.first);
+    }
+
 
     return Value();
 }

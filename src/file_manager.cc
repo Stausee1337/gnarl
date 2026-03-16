@@ -6,6 +6,7 @@
 namespace gnarl {
 
 std::string read_entire_file(const char* filename, Error* error) {
+    printf("%s\n", filename);
     std::string result;
 
     FILE* file = fopen(filename, "r");
@@ -34,7 +35,7 @@ const InputFile* FileManager::load_file(PathView path, Error* error) {
     std::string data = read_entire_file(normalize(path).c_str(), error);
     if (error->has_error())
         return nullptr;
-    return &m_files.emplace_back(Path(path), data);
+    return new InputFile(Path(path), data);
 }
 
 }

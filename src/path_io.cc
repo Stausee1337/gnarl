@@ -108,7 +108,7 @@ bool PathView::is_source_absolute() const {
 PathView PathView::parent() const {
     PathParser parser = components();
 
-    // use double sided iterator to improve performance
+    // TODO: use double sided iterator to improve performance
     PathParser::Component component[3];
     size_t idx;
     for (idx = 0; parser.advance(component[idx % 3]); ++idx);

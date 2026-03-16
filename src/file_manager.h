@@ -18,7 +18,6 @@ public:
     const InputFile* load_file(PathView path, Error* error);
 
 private:
-    std::vector<InputFile> m_files;
 };
 
 }

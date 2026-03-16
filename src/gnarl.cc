@@ -11,7 +11,7 @@
 namespace gnarl {
 
 Value do_run_file(Workspace* workspace, const InputFile* file, Error* error) {
-    std::vector<Token> token_buffer = Lexer::lex_to_buffer(*file, error);
+    std::vector<Token> token_buffer = Lexer::lex_to_buffer(file, error);
     if (error->has_error()) return Value();
 
     std::unique_ptr<BaseNode> expr = Parser::parse(token_buffer, error);

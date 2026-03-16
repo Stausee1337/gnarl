@@ -18,7 +18,7 @@ Functions:
  _ filter_labels_include (TODO: patterns)
  X forward_variables_from
  _ get_label_info
- _ get_path_info
+ _ get_path_info (TODO: PathIO)
  _ get_target_outputs
  X getenv
  _ import (TODO: Path/FileIO)

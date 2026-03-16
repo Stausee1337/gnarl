@@ -16,15 +16,14 @@ namespace gnarl {
 
 class Lexer final {
 public:
-    static std::vector<Token> lex_to_buffer(
-            const InputFile& input_file, Error* error);
+    static std::vector<Token> lex_to_buffer(const InputFile* input_file, Error* error);
 
     static std::vector<Token> sublex_to_buffer(const Position& start, std::string_view data, Error* error);
 
 private:
-    Lexer(const InputFile& input_file, Error* error)
+    Lexer(const InputFile* input_file, Error* error)
         : error(error),
-        source(input_file.source()), 
+        source(input_file->source()), 
         input_file(input_file)
     {}
 
@@ -61,7 +60,7 @@ private:
 
     Error* error;
     std::string_view source;
-    const InputFile& input_file;
+    const InputFile* input_file;
 
     std::optional<Token> previous;
 };

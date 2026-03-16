@@ -247,16 +247,16 @@ Token Lexer::lex_number_literal() {
 
 Token Lexer::make_token(TokenKind kind) const {
     std::string_view data(source.data() + tok_start, position() - tok_start);
-    Position token_start(&input_file, lineno, (tok_start - bol) + 1);
+    Position token_start(input_file, lineno, (tok_start - bol) + 1);
     return Token(kind, data, token_start);
 }
 
 Position Lexer::current_position() const {
-    return Position(&input_file, lineno, column());
+    return Position(input_file, lineno, column());
 }
 
 Span Lexer::token_span() const {
-    Position token_start(&input_file, lineno, (tok_start - bol) + 1);
+    Position token_start(input_file, lineno, (tok_start - bol) + 1);
     return Span(token_start, current_position());
 }
 
@@ -306,9 +306,9 @@ void Lexer::bump() {
     m_current = source[++m_position];
 }
 
-std::vector<Token> Lexer::lex_to_buffer(const InputFile& input_file, Error* error) {
+std::vector<Token> Lexer::lex_to_buffer(const InputFile* input_file, Error* error) {
     std::vector<Token> buffer;
-    if (input_file.is_empty()) return buffer;
+    if (input_file->is_empty()) return buffer;
 
     Lexer lexer(input_file, error);
     lexer.lex(buffer);
@@ -321,7 +321,7 @@ std::vector<Token> Lexer::sublex_to_buffer(const Position& start, std::string_vi
     if (data.empty()) return buffer;
 
     DCHECK(start.file());
-    Lexer lexer(*start.file(), error);
+    Lexer lexer(start.file(), error);
     lexer.source = data;
     lexer.lineno = start.lineno();
     lexer.bol    = -start.column(); // FIXME: very hacky hack 
