@@ -26,7 +26,7 @@ public:
         Component(Kind kind, std::string_view data) : kind(kind), data(data)
         {}
 
-        bool operator==(Component& other) const {
+        bool operator==(const Component& other) const {
             return kind == other.kind && data == other.data;
         }
     
@@ -52,15 +52,23 @@ private:
 class Path final {
 public:
     Path() = default;
+    Path(const std::string& path) : m_data(path)
+    {}
+
     Path(std::string_view path) : m_data(path)
     {}
 
-    Path(PathView view);
+    explicit Path(const char* path) : m_data(path, strlen(path))
+    {}
+
+    explicit Path(PathView view);
 
     const char* data() const { return m_data.data(); }
     const char* c_str() const { return m_data.c_str(); }
     size_t size() const { return m_data.size(); }
     std::string_view string() const { return m_data; }
+
+    PathView parent() const;
 
     PathParser components() const;
 
@@ -74,6 +82,10 @@ class PathView final {
 public:
     PathView(const Path& path)
         : m_length(path.size()), m_data(path.data())
+    {}
+
+    PathView(const std::string& string)
+        : m_length(string.length()), m_data(string.data())
     {}
 
     PathView(std::string_view path)
@@ -90,6 +102,10 @@ public:
     const char* data() const { return m_data; }
     std::string_view string() const { return std::string_view(m_data, m_length); }
 
+    bool is_absolute() const;
+    bool is_source_absolute() const;
+    PathView parent() const;
+
     PathParser components() const;
 
 private:
@@ -102,20 +118,7 @@ concept PathLike = std::convertible_to<T, PathView>;
 
 Path normalize(PathView path);
 
-template<PathLike P>
-Path normalize(P pathlike) {
-    PathView path(pathlike);
-    return normalize(path);
-}
-
-Path resolve_unique(PathView path);
-
-template<PathLike P>
-Path resolve_unique(P pathlike) {
-    PathView path(pathlike);
-    return resolve_unique(path);
-}
-
+Path resolve_unique(PathView path, PathView currdir);
 }
 
 #endif // GNARL_PATH_IO_H_

@@ -55,6 +55,10 @@ Path::Path(PathView view)
     : m_data(view.data(), view.size())
 { }
 
+PathView Path::parent() const {
+    return PathView(*this).parent();
+}
+
 PathParser Path::components() const {
     return PathView(*this).components();
 }
@@ -87,6 +91,32 @@ PathView::PathView(const PathParser::Component& component) {
     }
 }
 
+bool PathView::is_absolute() const {
+    PathParser parser = components();
+    PathParser::Component first;
+    if (!parser.advance(first)) return false;
+    return first.kind == PathParser::Component::ROOT_DIR;
+}
+
+bool PathView::is_source_absolute() const {
+    PathParser parser = components();
+    PathParser::Component first;
+    if (!parser.advance(first)) return false;
+    return first.kind == PathParser::Component::SOURCE_DIR;
+}
+
+PathView PathView::parent() const {
+    PathParser parser = components();
+
+    // use double sided iterator to improve performance
+    PathParser::Component component[3];
+    size_t idx;
+    for (idx = 0; parser.advance(component[idx % 3]); ++idx);
+
+    if (idx < 2) return "";
+    return component[(idx - 2) % 3];
+}
+
 PathParser PathView::components() const {
     return PathParser(this->string());
 }
@@ -97,7 +127,7 @@ PathView source_dir() {
     return workspace->source_dir();
 }
 
-Path normalize(PathView path) {
+Path normalize(PathView path, bool keep_source_dir) {
     if (path.size() == 0) return Path();
 
     PathParser path_parser = path.components();
@@ -111,7 +141,7 @@ Path normalize(PathView path) {
 
     // TODO: maybe figure out a way to write without goto?
     PathParser* parser = &path_parser;
-    if (component.kind == PathParser::Component::SOURCE_DIR)
+    if (component.kind == PathParser::Component::SOURCE_DIR && !keep_source_dir)
         parser = &source_dir_parser;
     else
         goto do_parse;
@@ -143,6 +173,51 @@ do_parse:
         normalized += component;
 
     return normalized;
+}
+
+
+Path normalize(PathView path) {
+    return normalize(path, /*keep_source_dir=*/ false);
+}
+
+bool strip_prefix(PathView path, PathView prefix, Path& result) {
+    PathParser path_parser = path.components();
+    PathParser prefix_parser = prefix.components();
+
+    PathParser::Component cpath;
+    PathParser::Component cprefix;
+    while (true) {
+
+        bool epath = path_parser.advance(cpath);
+        bool eprefix = prefix_parser.advance(cprefix);
+
+        if (!eprefix) break;
+        if (!epath) return false;
+        if (cpath != cprefix) return false;
+    }
+
+    do {
+        result += cpath;
+    } while (path_parser.advance(cpath));
+
+    return true;
+}
+
+Path resolve_unique(PathView path, PathView currdir) {
+    if (path.is_source_absolute()) {
+         return normalize(path, /*keep_source_dir=*/ true);
+    } else if (path.is_absolute()) {
+         Path absolute = normalize(path);
+         Path result("//");
+         if (strip_prefix(absolute, source_dir(), result))
+             return result;
+         return absolute;
+    }
+    
+    DCHECK(currdir.is_absolute() || currdir.is_source_absolute());
+    Path absolute = normalize(currdir);
+    absolute += path;
+    return resolve_unique(absolute, "");
 }
 
 }
