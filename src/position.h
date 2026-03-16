@@ -4,8 +4,6 @@
 
 #include <stdint.h>
 
-#include "input_file.h"
-
 namespace gnarl {
 
 class InputFile;

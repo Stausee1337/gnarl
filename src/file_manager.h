@@ -15,7 +15,7 @@ class FileManager final {
 public:
     FileManager() = default;
 
-    const InputFile* load_file(Path path, Error* error);
+    const InputFile* load_file(PathView path, Error* error);
 
 private:
     std::vector<InputFile> m_files;

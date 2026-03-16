@@ -30,11 +30,11 @@ failure:
     return std::string();
 }
 
-const InputFile* FileManager::load_file(Path path, Error* error) {
-    std::string data = read_entire_file(path.c_str(), error);
+const InputFile* FileManager::load_file(PathView path, Error* error) {
+    std::string data = read_entire_file(normalize(path).c_str(), error);
     if (error->has_error())
         return nullptr;
-    return &m_files.emplace_back(path, data);
+    return &m_files.emplace_back(Path(path), data);
 }
 
 }

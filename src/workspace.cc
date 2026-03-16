@@ -11,7 +11,8 @@ void setup_gnarl_globals(Scope* globals) {
 }
 
 Workspace::Workspace(Workspace::Options options)
-    : m_source_dir(options.source_dir) {
+    : m_source_dir(options.source_dir),
+    m_import_manager(&m_file_manager) {
     Scope* globals;
     m_globals = globals = new Scope();
     setup_gnarl_globals(globals);

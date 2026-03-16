@@ -22,6 +22,7 @@ static_library(
         'src/integer.cc',
         'src/path_io.cc',
         'src/file_manager.cc',
+        'src/import_manager.cc',
     ],
 )
 

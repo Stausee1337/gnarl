@@ -10,23 +10,23 @@
 
 namespace gnarl {
 
-Value do_run_file(Workspace* workspace, const InputFile& file, Error* error) {
-    std::vector<Token> token_buffer = Lexer::lex_to_buffer(file, error);
+Value do_run_file(Workspace* workspace, const InputFile* file, Error* error) {
+    std::vector<Token> token_buffer = Lexer::lex_to_buffer(*file, error);
     if (error->has_error()) return Value();
 
     std::unique_ptr<BaseNode> expr = Parser::parse(token_buffer, error);
     if (error->has_error()) return Value();
 
-    std::unique_ptr<Scope> scope = std::make_unique<FileScope>(workspace);
+    std::unique_ptr<Scope> scope = std::make_unique<FileScope>(workspace, file);
     return expr->evaluate(scope.get(), error);
 }
 
 void run_gnarl(Workspace* workspace, ExitCode* exit_code) {
     Error error;
 
-    const InputFile* entry = workspace->file_manager()->load_file(normalize("//BUILD.gn"), &error);
+    const InputFile* entry = workspace->file_manager()->load_file("//BUILD.gn", &error);
     if (entry) {
-        do_run_file(workspace, *entry, &error);
+        do_run_file(workspace, entry, &error);
     }
 
 

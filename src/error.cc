@@ -5,6 +5,7 @@
 #include "error.h"
 #include "nodes.h"
 #include "format.h"
+#include "input_file.h"
 
 namespace gnarl {
 

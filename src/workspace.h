@@ -4,6 +4,7 @@
 
 #include <string>
 #include "file_manager.h"
+#include "import_manager.h"
 
 namespace gnarl {
 
@@ -27,6 +28,8 @@ public:
     const Scope* globals() const { return m_globals; }
     const Path& source_dir() const { return m_source_dir; }
     FileManager* file_manager() { return &m_file_manager; }
+    ImportManager* import_manager() { return &m_import_manager; }
+
 private:
     Path m_source_dir;
 
@@ -34,7 +37,7 @@ private:
     const Scope* m_globals;
 
     FileManager m_file_manager;
-    // ImportManager m_import_manager;
+    ImportManager m_import_manager;
     // TargetManager m_target_manager;
 };
 

@@ -9,6 +9,7 @@
 #include "value.h"
 #include "scope.h"
 #include "functions.h"
+#include "workspace.h"
 #include "file_scope.h"
 
 namespace gnarl {
@@ -204,8 +205,7 @@ Value builtin_import(Scope* scope, Error* error, const Span& call_span, const st
     Span span = path_value.origin() ? *path_value.origin() : call_span;
 
     const FileScope* file = scope->file();
-    const Workspace* workspace = file->workspace();
-    // const Scope* import_scope = workspace->import_manager()->import_from(path, file, span, call_span, error);
+    const Scope* import_scope = file->workspace()->import_manager()->import_from(path, file, span, call_span, error);
     if (error->has_error()) 
         return Value();
 
