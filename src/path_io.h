@@ -112,6 +112,8 @@ public:
 
     PathParser components() const;
 
+    bool operator==(const PathView& other) const;
+
 private:
     size_t m_length;
     const char* m_data;
@@ -123,6 +125,17 @@ concept PathLike = std::convertible_to<T, PathView>;
 Path normalize(PathView path);
 
 Path resolve_unique(PathView path, PathView currdir);
+}
+
+namespace std {
+
+template<>
+struct hash<gnarl::PathView> {
+    size_t operator()(const gnarl::PathView& view) const {
+        return hash<std::string_view>()(view.string());
+    }
+};
+
 }
 
 #endif // GNARL_PATH_IO_H_

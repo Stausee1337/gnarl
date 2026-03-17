@@ -124,6 +124,10 @@ PathParser PathView::components() const {
     return PathParser(this->string());
 }
 
+bool PathView::operator==(const PathView& other) const {
+    return m_length == other.m_length && strncmp(m_data, other.m_data, m_length) == 0;
+}
+
 PathView source_dir() {
     Workspace* workspace = Workspace::current();
     DCHECK(workspace);
