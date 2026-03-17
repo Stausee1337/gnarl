@@ -1,11 +1,14 @@
 
 #include <algorithm>
+#include <optional>
+#include <span>
 #include <sstream>
 #include <string.h>
 #include <unordered_map>
 
 #include "error.h"
 #include "nodes.h"
+#include "path_io.h"
 #include "value.h"
 #include "scope.h"
 #include "functions.h"
@@ -176,6 +179,117 @@ Value builtin_forward_variables_from(Scope* scope, Error* error, const Span& cal
     }
 
     return Value();
+}
+
+enum class PathInfoKind {
+    File,
+    Name,
+    Extension,
+    Directory,
+    Abspath
+};
+
+Value get_path_info_impl(Scope* scope, std::span<const std::string> paths, PathInfoKind kind, bool return_path) {
+    std::optional<Path> currdir_cache;
+
+    auto get_current_dir = [&currdir_cache, scope]() -> PathView {
+        if (currdir_cache.has_value())
+            return currdir_cache.value();
+        const FileScope* file = scope->file();
+        currdir_cache = file->input_file()->path();
+        return currdir_cache.value();
+    };
+
+    std::vector<Value> results;
+    for (const auto& p : paths) {
+        PathView path(p);
+        switch (kind) {
+            case PathInfoKind::File:
+                results.push_back(Value(nullptr, std::string(path.file())));
+                break;
+            case PathInfoKind::Name:
+            {
+                std::string_view file = path.file();
+                splitext(&file);
+                results.push_back(Value(nullptr, std::string(file)));
+            }
+            break;
+            case PathInfoKind::Extension:
+            {
+                std::string_view file = path.file();
+                results.push_back(Value(nullptr, std::string(splitext(&file))));
+            }
+            break;
+            case PathInfoKind::Directory:
+            {
+                PathView parent = path.parent();
+                if (parent.size() == 0)
+                    results.push_back(Value(nullptr, std::string(".")));
+                else
+                    results.push_back(Value(nullptr, std::string(parent.string())));
+            }
+            break;
+            case PathInfoKind::Abspath:
+            {
+                Path resolved = resolve_unique(path, get_current_dir());
+                results.push_back(Value(nullptr, std::string(resolved.string())));
+            }
+            break;
+        
+        }
+
+    }
+    if (return_path)
+        return results[0];
+
+    return Value(nullptr, std::move(results));
+}
+
+Value builtin_get_path_info(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("get_path_info", 2);
+
+    const Value& what_value = args[1];
+    if (!what_value.typeck(Value::Kind::String, error))
+        return Value();
+    const std::string& what_string = what_value.as_string();
+
+    PathInfoKind kind;
+    if (what_string == "file")
+        kind = PathInfoKind::File;
+    else if (what_string == "name")
+        kind = PathInfoKind::Name;
+    else if (what_string == "extension")
+        kind = PathInfoKind::Extension;
+    else if (what_string == "dir")
+        kind = PathInfoKind::Directory;
+    else if (what_string == "abspath")
+        kind = PathInfoKind::Abspath;
+    else {
+        Span span = what_value.origin() ? *what_value.origin() : call_span;
+        *error = Error(span, "Unknown value for 'what'");
+        return Value();
+    }
+
+    const Value& path_value = args[0];
+    if (path_value.kind() != Value::Kind::String && path_value.kind() != Value::Kind::List) {
+        Span span = path_value.origin() ? *path_value.origin() : call_span;
+        *error = Error(span, "Path must be a string or a list of strings");
+        return Value();
+    }
+
+    if (path_value.kind() == Value::Kind::String)
+        return get_path_info_impl(scope, std::span<const std::string>(&path_value.as_string(), 1), kind, true);
+
+    const std::vector<Value>& paths_list = path_value.as_list();
+
+    std::vector<std::string> path_strings;
+    for (const auto& v : paths_list) {
+        if (!path_value.typeck(Value::Kind::String, error))
+            return Value();
+        path_strings.push_back(v.as_string());
+    }
+
+    return get_path_info_impl(scope, std::span(path_strings), kind, false);
 }
 
 Value builtin_getenv(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {

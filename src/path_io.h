@@ -4,6 +4,7 @@
 
 #include <string.h>
 #include <concepts>
+#include <string_view>
 #include <vector>
 #include <string>
 
@@ -69,6 +70,7 @@ public:
     std::string_view string() const { return m_data; }
 
     PathView parent() const;
+    std::string_view file() const;
 
     PathParser components() const;
 
@@ -109,6 +111,7 @@ public:
     bool is_absolute() const;
     bool is_source_absolute() const;
     PathView parent() const;
+    std::string_view file() const;
 
     PathParser components() const;
 
@@ -125,6 +128,8 @@ concept PathLike = std::convertible_to<T, PathView>;
 Path normalize(PathView path);
 
 Path resolve_unique(PathView path, PathView currdir);
+
+std::string_view splitext(std::string_view* filename);
 }
 
 namespace std {

@@ -19,6 +19,7 @@ namespace gnarl {
 #define BUILTIN_LIST(LFF, LFM, LBF, LBM)    \
     LFF(assert)                             \
     LFF(forward_variables_from)             \
+    LFF(get_path_info)                      \
     LFF(getenv)                             \
     LFF(import)                             \
     LFF(len)                                \

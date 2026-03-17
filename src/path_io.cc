@@ -61,6 +61,10 @@ PathView Path::parent() const {
     return PathView(*this).parent();
 }
 
+std::string_view Path::file() const {
+    return PathView(*this).file();
+}
+
 PathParser Path::components() const {
     return PathView(*this).components();
 }
@@ -118,6 +122,20 @@ PathView PathView::parent() const {
     if (idx < 2) return "";
     PathParser::Component& component = components[(idx - 2) % 3];
     return PathView(m_data, (component.data.data() - m_data) + component.data.length());
+}
+
+std::string_view PathView::file() const {
+    if (m_length == 0 || m_data[m_length - 1] == '/') return "";
+
+    PathParser parser = components();
+
+    // TODO: use double sided iterator to improve performance
+    PathParser::Component components[2];
+    size_t idx;
+    for (idx = 0; parser.advance(components[idx % 2]); ++idx);
+
+    if (idx < 1) return "";
+    return components[(idx - 1) % 2].data;
 }
 
 PathParser PathView::components() const {
@@ -225,6 +243,21 @@ Path resolve_unique(PathView path, PathView currdir) {
     Path absolute = normalize(currdir);
     absolute += path;
     return resolve_unique(absolute, "");
+}
+
+std::string_view splitext(std::string_view* filename) {
+    if (filename->size() == 0 || *filename == "..") return "";
+
+    std::string_view::const_iterator current = filename->end() - 1;
+    for (; current != filename->begin(); --current)
+        if (*current == '.') break;
+
+    if (current == filename->begin())
+        return "";
+
+    std::string_view ext(current+1, (filename->end() - current) - 1);
+    *filename = std::string_view(filename->begin(), (current - filename->begin()));
+    return ext;
 }
 
 }
