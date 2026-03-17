@@ -18,8 +18,8 @@ const Scope* ImportManager::import_from(PathView path,
                                         const Span& call_span,
                                         Error* error) {
     const InputFile* input_file = file->input_file();
-    PathView source_dir = input_file->path().parent();
-    Path file_path = resolve_unique(path, source_dir);
+    PathView current_dir = input_file->path().parent();
+    Path file_path = resolve_unique(path, current_dir);
     std::cout << file_path.string() << "\n";
 
     const InputFile* import_file = m_file_manager->load_file(file_path, error);
@@ -34,7 +34,7 @@ const Scope* ImportManager::import_from(PathView path,
     if (error->has_error())
         return nullptr;
 
-    std::unique_ptr<Scope> scope = std::make_unique<FileScope>(file->workspace(), input_file);
+    std::unique_ptr<Scope> scope = std::make_unique<FileScope>(file->workspace(), import_file);
     expr->evaluate(scope.get(), error);
     
     return scope.release();

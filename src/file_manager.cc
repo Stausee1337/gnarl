@@ -6,7 +6,6 @@
 namespace gnarl {
 
 std::string read_entire_file(const char* filename, Error* error) {
-    printf("%s\n", filename);
     std::string result;
 
     FILE* file = fopen(filename, "r");

@@ -19,12 +19,14 @@ repeat:
     if (m_current >= m_path.end())
         return false;
     else if (m_current == m_path.begin()) {
+        Iterator start = m_current;
         if (*m_current == '/') {
             m_current++;
-            if (m_current < m_path.end() && *m_current == '/')
-                component = Component(Component::SOURCE_DIR, "//");
-            else
-                component = Component(Component::ROOT_DIR, "/");
+            if (m_current < m_path.end() && *m_current == '/') {
+                m_current++;
+                component = Component(Component::SOURCE_DIR, std::string_view(&*start, m_current - start));
+            } else
+                component = Component(Component::ROOT_DIR, std::string_view(&*start, m_current - start));
             return true;
         }
     }
@@ -109,12 +111,13 @@ PathView PathView::parent() const {
     PathParser parser = components();
 
     // TODO: use double sided iterator to improve performance
-    PathParser::Component component[3];
+    PathParser::Component components[3];
     size_t idx;
-    for (idx = 0; parser.advance(component[idx % 3]); ++idx);
+    for (idx = 0; parser.advance(components[idx % 3]); ++idx);
 
     if (idx < 2) return "";
-    return component[(idx - 2) % 3];
+    PathParser::Component& component = components[(idx - 2) % 3];
+    return PathView(m_data, (component.data.data() - m_data) + component.data.length());
 }
 
 PathParser PathView::components() const {

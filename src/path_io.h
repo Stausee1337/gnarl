@@ -96,6 +96,10 @@ public:
         : m_length(strlen(path)), m_data(path)
     {}
 
+    PathView(const char* path, size_t length)
+        : m_length(length), m_data(path)
+    {}
+
     PathView(const PathParser::Component& component);
 
     size_t size() const { return m_length; }
