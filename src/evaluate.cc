@@ -332,16 +332,61 @@ Value evaluate_object_arithmetic(Error* error, const Value& lhs_value, const Val
     } 
 }
 
+#define EMPTY_MSG "Operator requires a value"
+
+enum Boolean {
+    BOOLEAN_OR,
+    BOOLEAN_AND,
+};
+
+
+template<Boolean BOOLEAN>
+Value evaluate_boolean_operator(CONTEXT, const BaseNode& lhs_node, const BaseNode& rhs_node, const BinaryOpNode* op_node) {
+    Value lhs_value = EVAL2VAL(lhs_node, Value(), EMPTY_MSG, "The thing on the left does not evaluate to a value");
+
+    const char* operator_symbol;
+    if constexpr (BOOLEAN == BOOLEAN_OR)
+        operator_symbol = "||";
+    else
+        operator_symbol = "&&";
+
+    if (lhs_value.kind() != Value::Kind::Boolean) {
+        Span span = lhs_value.origin() ? *lhs_value.origin() : op_node->get_span();
+        *error = Error(span,
+                       "Left hand side of " + std::string(operator_symbol) + " operator is not a boolean",
+                       "Type is \"" + std::string(Value::type_name(lhs_value)) + "\" instead");
+        return Value();
+    }
+
+    lhs_value.set_origin(op_node->get_span());
+    if (lhs_value.as_boolean() ^ BOOLEAN) return lhs_value;
+
+    Value rhs_value = EVAL2VAL(rhs_node, Value(), EMPTY_MSG, "The thing on the right does not evaluate to a value");
+    if (rhs_value.kind() != Value::Kind::Boolean) {
+        Span span = rhs_value.origin() ? *rhs_value.origin() : op_node->get_span();
+        *error = Error(span,
+                       "Right hand side of " + std::string(operator_symbol) + " operator is not a boolean",
+                       "Type is \"" + std::string(Value::type_name(rhs_value)) + "\" instead");
+        return Value();
+    }
+
+    rhs_value.set_origin(op_node->get_span());
+    return rhs_value;
+}
+
 Value evaluate_binary_operator(CONTEXT, const BinaryOpNode& op_node) {
     const BaseNode& lhs_node = *op_node.lhs();
     const BaseNode& rhs_node = *op_node.rhs();
 
-#define EMPTY_MSG "Operator requires a value"
+    TokenKind op = op_node.tok().kind();
+    if (op == TokenKind::BooleanOr)
+        return evaluate_boolean_operator<BOOLEAN_OR>(scope, error, lhs_node, rhs_node, &op_node);
+    else if (op == TokenKind::BooleanAnd)
+        return evaluate_boolean_operator<BOOLEAN_AND>(scope, error, lhs_node, rhs_node, &op_node);
+
     Value lhs_value = EVAL2VAL(lhs_node, Value(), EMPTY_MSG, "The thing on the left does not evaluate to a value");
     Value rhs_value = EVAL2VAL(rhs_node, Value(), EMPTY_MSG, "The thing on the right does not evaluate to a value");
-#undef EMPTY_MSG
 
-    TokenKind op = op_node.tok().kind();
     switch (op) {
         case TokenKind::EqualEqual:
             return Value(&op_node, lhs_value == rhs_value);
@@ -360,6 +405,8 @@ Value evaluate_binary_operator(CONTEXT, const BinaryOpNode& op_node) {
             ABORT("invalid token kind in BinaryOpNode");
     }
 }
+
+#undef EMPTY_MSG
 
 Value BinaryOpNode::evaluate(CONTEXT) const {
     TokenKind op = m_tok.kind();
