@@ -327,6 +327,7 @@ Value builtin_import(Scope* scope, Error* error, const Span& call_span, const st
     Scope::ValueMap import_scope_values = import_scope->get_values();
     for (const auto& p : import_scope_values) {
         Value our_value;
+        if (p.first.starts_with("_")) continue;
         if (scope->has_value(p.first) && (our_value = *scope->get_value(p.first, false)) != p.second) {
             *error = Error(call_span,
                            "Value collision",
