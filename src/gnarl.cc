@@ -6,23 +6,39 @@
 #include "parser.h"
 #include "scope.h"
 #include "file_scope.h"
-#include "format.h"
+#include "path_io.h"
+#include <memory>
 
 namespace gnarl {
 
-Value do_run_file(Workspace* workspace, const InputFile* file, Error* error) {
+std::unique_ptr<Scope> do_run_file(Workspace* workspace, const InputFile* file, Error* error) {
     std::vector<Token> token_buffer = Lexer::lex_to_buffer(file, error);
-    if (error->has_error()) return Value();
+    if (error->has_error()) return std::unique_ptr<Scope>();
 
     std::unique_ptr<BaseNode> expr = Parser::parse(token_buffer, error);
-    if (error->has_error()) return Value();
+    if (error->has_error()) return std::unique_ptr<Scope>();
 
     std::unique_ptr<Scope> scope = std::make_unique<FileScope>(workspace, file);
-    return expr->evaluate(scope.get(), error);
+    expr->evaluate(scope.get(), error);
+
+    return scope;
 }
 
 void run_gnarl(Workspace* workspace, ExitCode* exit_code) {
     Error error;
+
+    PathView make_globals = "//make_globals.gn";
+    Path normalized = normalize(make_globals);
+    if (pathexists(normalized)) {
+        const InputFile* mg = workspace->file_manager()->load_file(make_globals, &error);
+        if (mg) {
+            std::unique_ptr<Scope> scope = do_run_file(workspace, mg, &error);
+            Scope* globals = workspace->globals();
+
+            for (const auto& v : scope->get_values())
+                globals->set_value(v.first, Value(v.second)); 
+        }
+    }
 
     const InputFile* entry = workspace->file_manager()->load_file("//BUILD.gn", &error);
     if (entry) {

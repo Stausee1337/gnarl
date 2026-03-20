@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <unistd.h>
 #include <vector>
 #include "assertions.h"
 #include "workspace.h"
@@ -258,6 +259,14 @@ std::string_view splitext(std::string_view* filename) {
     std::string_view ext(current+1, (filename->end() - current) - 1);
     *filename = std::string_view(filename->begin(), (current - filename->begin()));
     return ext;
+}
+
+bool pathexists(Path path) {
+    return access(path.c_str(), F_OK) == 0;
+}
+
+bool pathexists(PathView path) {
+    return pathexists(Path(path));
 }
 
 }

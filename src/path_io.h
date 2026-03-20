@@ -130,6 +130,9 @@ Path normalize(PathView path);
 Path resolve_unique(PathView path, PathView currdir);
 
 std::string_view splitext(std::string_view* filename);
+
+bool pathexists(Path path);
+bool pathexists(PathView path);
 }
 
 namespace std {
