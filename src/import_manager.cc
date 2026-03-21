@@ -20,11 +20,12 @@ const Scope* ImportManager::import_from(PathView path,
     const InputFile* input_file = file->input_file();
     PathView current_dir = input_file->path().parent();
     Path file_path = resolve_unique(path, current_dir);
-    std::cout << file_path.string() << "\n";
 
     ImportCache::const_iterator entry = m_import_cache.find(file_path);
     if (entry != m_import_cache.end())
         return entry->second;
+
+    std::cout << file_path.string() << "\n";
 
     const InputFile* import_file = m_file_manager->load_file(file_path, error);
     if (error->has_error())
@@ -43,7 +44,8 @@ const Scope* ImportManager::import_from(PathView path,
     if (error->has_error()) return nullptr;
 
     const FileScope* scope = owned_scope.release();
-    m_import_cache.insert(std::pair(import_file->path(), scope));
+
+    m_import_cache.insert(std::pair(PathView(import_file->path()), scope));
 
     return scope;
 }
