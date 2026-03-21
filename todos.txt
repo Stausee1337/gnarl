@@ -41,5 +41,10 @@ Functions:
  X defined
  X foreach
  _ config
+ _ executable (target)
  _ declare_args
+ _ shared_library (target)
+ _ source_set (target)
+ _ static_library (target)
+ _ target
  _ template

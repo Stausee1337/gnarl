@@ -31,7 +31,8 @@ namespace gnarl {
     LFF(string_split)                       \
     LFM(defined)                            \
     LBM(foreach)                            \
-
+    LBF(declare_args)                       \
+    LBF(template)
 
 #define CONTEXT Scope* scope, Error* error, const Span& call
 

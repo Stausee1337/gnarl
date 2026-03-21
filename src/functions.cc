@@ -36,6 +36,10 @@ namespace gnarl {
         node->as_##kind();                  \
     })
 
+#define NON_NESTABLE_BLOCK(name, span, scope, error)            \
+    NonNestableBlockScope _nnb_scope(name, span, scope, error); \
+    if (error->has_error()) return Value()
+
 bool in_range(size_t target, size_t exactly) { return target == exactly; }
 bool in_range(size_t target, size_t min, size_t max) {
     return target >= min && target <= max;
@@ -46,7 +50,7 @@ constexpr const char* count2str[] = {
 };
 
 std::string expected_argcount(const char* name, size_t exactly) {
-    return std::string(name) + "() takes exactly " + std::string(count2str[exactly]) + "arguments";
+    return std::string(name) + "() takes exactly " + std::string(count2str[exactly]) + (exactly != 1 ? " arguments" : " argument");
 }
 
 std::string expected_argcount(const char* name, size_t min, size_t max) {
@@ -64,6 +68,37 @@ std::string expected_argcount(const char* name, size_t min, size_t max) {
             + std::string(count2str[max])
             + " arguments";
 }
+
+class NonNestableBlockScope;
+static const Scope::AttributeKey<NonNestableBlockScope> AKEY_NON_NESTABLE_BLOCK;
+
+class NonNestableBlockScope final {
+public:
+    NonNestableBlockScope(const char* block_name, Span call_span, Scope* scope, Error* error) { 
+        if (const NonNestableBlockScope* block = scope->query_attribute(&AKEY_NON_NESTABLE_BLOCK)) {
+            *error = Error(call_span,
+                          "Can't nest these things",
+                          "You are trying to nest a " + std::string(block_name) + " inside a " + std::string(block->m_block_name));
+            error->append_suberror(Error(block->m_call_span, "The enclosing block"));
+            return;
+        }
+        scope->set_attribute(&AKEY_NON_NESTABLE_BLOCK, *this);
+        m_scope = scope;
+        m_call_span = call_span;
+        m_block_name = block_name;
+    }
+
+    ~NonNestableBlockScope() {
+        if (m_scope)
+            m_scope->delete_attribute(&AKEY_NON_NESTABLE_BLOCK);
+    }
+
+private:
+
+    Scope* m_scope = nullptr;
+    Span m_call_span;
+    const char* m_block_name;
+};
 
 Value builtin_assert(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
     ARGCK("assert", 1, 2);
@@ -701,6 +736,35 @@ Value builtin_foreach(Scope* scope,
         if (error->has_error())
             return Value();
     }
+    return Value();
+}
+
+Value builtin_declare_args(Scope* scope,
+                           Error* error,
+                           const Span& call_span,
+                           const std::vector<Value>& args,
+                           const BlockNode& block) {
+    NON_NESTABLE_BLOCK("declare_args", call_span, scope, error);
+
+    // TODO: actually declare the args
+    block.evaluate(scope, error);
+    return Value();
+}
+
+Value builtin_template(Scope* scope,
+                       Error* error,
+                       const Span& call_span,
+                       const std::vector<Value>& args,
+                       const BlockNode& block) {
+    NON_NESTABLE_BLOCK("template", call_span, scope, error);
+
+    ARGCK("template", 1);
+
+    const Value& name_value = args[0];
+    if (!name_value.typeck(Value::Kind::String, error))
+        return Value();
+    const std::string& name = name_value.as_string();
+
     return Value();
 }
 
