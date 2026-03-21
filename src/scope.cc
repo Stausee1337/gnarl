@@ -92,6 +92,32 @@ bool Scope::equals_current_values(const Scope& other) const {
     }
     return true;
 }
+void Scope::add_attribute(const Scope::AttributeKey<>* key) {
+    set_attribute((uintptr_t)key, (const void*)1);
+}
+
+bool Scope::query_attribute(const Scope::AttributeKey<>* key) const {
+    const void* p = query_attribute((uintptr_t)key);
+    return p != nullptr;
+}
+
+void Scope::delete_attribute(uintptr_t key) {
+    AttributeMap::const_iterator iter = m_attrs.find(key);
+    if (iter == m_attrs.end())
+        return;
+    m_attrs.erase(iter);
+}
+
+void Scope::set_attribute(uintptr_t key, const void* value) {
+    m_attrs.insert(std::pair(key, value));
+}
+
+const void* Scope::query_attribute(uintptr_t key) const {
+    AttributeMap::const_iterator iter = m_attrs.find(key);
+    if (iter != m_attrs.end()) return iter->second;
+    if (!parent()) return nullptr;
+    return parent()->query_attribute(key);
+}
 
 }
 

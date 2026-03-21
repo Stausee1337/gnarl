@@ -4,6 +4,7 @@
 
 #include <string_view>
 #include <map>
+#include <unordered_map>
 
 #include "value.h"
 
@@ -15,6 +16,9 @@ class FileScope;
 class Scope {
 public:
     using ValueMap = std::map<std::string_view, Value>;
+
+    template<typename T = void>
+    struct AttributeKey {};
 
     Scope(Scope* parent);
     Scope(const Scope* parent);
@@ -38,10 +42,28 @@ public:
 
     bool equals_current_values(const Scope& other) const;
 
+    void add_attribute(const AttributeKey<>* key);
+
+    template<typename T>
+        requires(!std::is_same_v<T, void>)
+    void set_attribute(const AttributeKey<T>* key, const T& value);
+
+    template<typename T>
+    void delete_attribute(const AttributeKey<T>* key);
+
+    template<typename T>
+        requires(!std::is_same_v<T, void>)
+    const T* query_attribute(const AttributeKey<T>* key) const;
+
+    bool query_attribute(const AttributeKey<>* key) const;
+
 protected:
     const FileScope* m_file = nullptr;
 
 private:
+    void delete_attribute(uintptr_t key);
+    void set_attribute(uintptr_t key, const void* value);
+    const void* query_attribute(uintptr_t key) const;
     friend class Workspace;
 
     Scope() = default;
@@ -56,7 +78,28 @@ private:
     const Scope* m_const_parent = nullptr;
 
     ValueInfoMap m_values;
+
+    using AttributeMap = std::unordered_map<uintptr_t, const void*>;
+    AttributeMap m_attrs;
 };
+
+
+template<typename T>
+    requires(!std::is_same_v<T, void>)
+void Scope::set_attribute(const Scope::AttributeKey<T>* key, const T& value) {
+    set_attribute((uintptr_t)key, (const void*)&value);
+}
+
+template<typename T>
+void Scope::delete_attribute(const Scope::AttributeKey<T>* key) {
+    delete_attribute((uintptr_t)key);
+}
+
+template<typename T>
+    requires(!std::is_same_v<T, void>)
+const T* Scope::query_attribute(const AttributeKey<T>* key) const {
+    return (const T*)query_attribute((uintptr_t)key);
+}
 
 }
 
