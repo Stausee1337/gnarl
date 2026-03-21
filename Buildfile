@@ -23,6 +23,7 @@ static_library(
         'src/path_io.cc',
         'src/file_manager.cc',
         'src/import_manager.cc',
+        'src/template.cc',
     ],
 )
 

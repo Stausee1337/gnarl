@@ -12,6 +12,7 @@ namespace gnarl {
 
 class Workspace;
 class FileScope;
+class Template;
 
 class Scope {
 public:
@@ -39,6 +40,7 @@ public:
     void detatch_from_parent();
 
     void merge_into(Scope* scope, MergeOptions options, const Span& error_span, Error* error) const;
+    std::unique_ptr<Scope> make_closure() const;
 
     bool has_value(std::string_view name) const;
     const Value* get_value(std::string_view name, bool counts_as_used = true) const;
@@ -50,6 +52,9 @@ public:
     ValueMap get_values() const;
 
     bool equals_current_values(const Scope& other) const;
+
+    const Template* get_template(std::string_view name) const;
+    void add_template(std::unique_ptr<Template> templ);
 
     void add_attribute(const AttributeKey<>* key);
 
@@ -87,6 +92,9 @@ private:
     const Scope* m_const_parent = nullptr;
 
     ValueInfoMap m_values;
+
+    using TemplateMap = std::unordered_map<std::string_view, const Template*>;
+    TemplateMap m_templates;
 
     using AttributeMap = std::unordered_map<uintptr_t, const void*>;
     AttributeMap m_attrs;

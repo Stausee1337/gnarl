@@ -3,6 +3,7 @@
 
 #include "scope.h"
 #include "error.h"
+#include "template.h"
 
 namespace gnarl {
 
@@ -137,7 +138,69 @@ void Scope::merge_into(Scope* scope, MergeOptions options, const Span& error_spa
         if (options.mark_as_used)
             scope->mark_as_used(p.first);
     }
+
+    for (const auto& p : m_templates) {
+        if (options.skip_private_variables && p.first.starts_with("_"))
+            continue;
+
+        auto exclude_iter = std::find_if(exclude_list.begin(),
+                                         exclude_list.end(),
+                                         [p](auto v) { return p.first == v; });
+
+        if (exclude_iter != exclude_list.end())
+            continue;
+
+        if (options.disallow_clobbering) {
+            const Template* our_template;
+            if ((our_template = scope->get_template(p.first)) != nullptr) {
+                *error = Error(error_span,
+                               "Template collision",
+                               "This " + clobber_kind + " contains a template \"" + std::string(p.first) + "\"");
+                const Template* collided_template = p.second;
+                error->append_suberror(Error(collided_template->span(),
+                            "defined here",
+                            "Which would clobber the one in your current scope"));
+                error->append_suberror(
+                        Error(our_template->span(),
+                            "defined here",
+                            "Executing " + clobber_kind + " should not conflict with anything in the current\n"
+                            "scope"));
+                return; 
+            }
+        }
+
+        scope->m_templates.insert(std::pair(std::string_view(p.second->name()), p.second));
+    }
 }
+
+std::unique_ptr<Scope> Scope::make_closure() const {
+    std::unique_ptr<Scope> closured;
+
+    if (m_const_parent)
+        closured = std::make_unique<Scope>(m_const_parent);
+    else if (m_mutable_parent)
+        closured = m_mutable_parent->make_closure();
+    else
+        ABORT("parentless scope in make_closure");
+
+    Error error;
+    merge_into(closured.get(), MergeOptions{}, Span(), &error);
+    DCHECK(!error.has_error());
+
+    return closured;
+}
+
+const Template* Scope::get_template(std::string_view name) const {
+    TemplateMap::const_iterator iter = m_templates.find(name);
+    if (iter == m_templates.end())
+        return nullptr;
+    return iter->second;
+}
+
+void Scope::add_template(std::unique_ptr<Template> templ) {
+    m_templates.insert(std::pair(templ->name(), templ.release()));
+}
+
 void Scope::add_attribute(const Scope::AttributeKey<>* key) {
     set_attribute((uintptr_t)key, (const void*)1);
 }

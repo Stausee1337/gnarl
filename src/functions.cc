@@ -11,6 +11,7 @@
 #include "path_io.h"
 #include "value.h"
 #include "scope.h"
+#include "template.h"
 #include "functions.h"
 #include "workspace.h"
 #include "file_scope.h"
@@ -773,6 +774,18 @@ Value builtin_template(Scope* scope,
     if (!name_value.typeck(Value::Kind::String, error))
         return Value();
     const std::string& name = name_value.as_string();
+
+    const Template* existing = scope->get_template(name);
+    if (existing) {
+        *error = Error(call_span,
+                       "Duplicate template definition",
+                       "A template with this name was already defined");
+        error->append_suberror(Error(existing->span(), "Previous definition"));
+        return Value();
+    }
+
+    std::unique_ptr<Template> templ = std::make_unique<Template>(name, scope, call_span, &block);
+    scope->add_template(std::move(templ));
 
     return Value();
 }
