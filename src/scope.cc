@@ -152,7 +152,7 @@ void Scope::merge_into(Scope* scope, MergeOptions options, const Span& error_spa
 
         if (options.disallow_clobbering) {
             const Template* our_template;
-            if ((our_template = scope->get_template(p.first)) != nullptr) {
+            if ((our_template = scope->get_template(p.first)) != nullptr && our_template != p.second) {
                 *error = Error(error_span,
                                "Template collision",
                                "This " + clobber_kind + " contains a template \"" + std::string(p.first) + "\"");
