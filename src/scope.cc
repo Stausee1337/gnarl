@@ -1,5 +1,8 @@
 
+#include <algorithm>
+
 #include "scope.h"
+#include "error.h"
 
 namespace gnarl {
 
@@ -91,6 +94,49 @@ bool Scope::equals_current_values(const Scope& other) const {
             return false;
     }
     return true;
+}
+
+void Scope::merge_into(Scope* scope, MergeOptions options, const Span& error_span, Error* error) const {
+    std::vector<std::string> exclude_list = options.exclude_list;
+
+    std::string clobber_kind(options.disallow_clobbering ? options.disallow_clobbering : "");
+    for (const auto& p : m_values) {
+        if (options.skip_private_variables && p.first.starts_with("_"))
+            continue;
+
+        auto exclude_iter = std::find_if(exclude_list.begin(),
+                                         exclude_list.end(),
+                                         [p](auto v) { return p.first == v; });
+
+        if (exclude_iter != exclude_list.end())
+            continue;
+
+        if (options.disallow_clobbering) {
+            Value our_value;
+            if (scope->has_value(p.first) && (our_value = *scope->get_value(p.first, false)) != p.second.value) {
+                *error = Error(error_span,
+                               "Value collision",
+                               "This " + clobber_kind + " contains \"" + std::string(p.first) + "\"");
+                const Value& clobbered_value = p.second.value;
+                if (clobbered_value.origin()) {
+                    error->append_suberror(Error(*clobbered_value.origin(),
+                                "defined here",
+                                "Which would clobber the one in your current scope"));
+                    if (our_value.origin())
+                        error->append_suberror(
+                                Error(*our_value.origin(),
+                                    "defined here",
+                                    "Executing " + clobber_kind + " should not conflict with anything in the current\n"
+                                    "scope unless the values are indentical"));
+                }
+                return; 
+            }
+        }
+
+        scope->set_value(p.first, Value(p.second.value));
+        if (options.mark_as_used)
+            scope->mark_as_used(p.first);
+    }
 }
 void Scope::add_attribute(const Scope::AttributeKey<>* key) {
     set_attribute((uintptr_t)key, (const void*)1);

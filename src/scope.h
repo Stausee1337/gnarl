@@ -20,6 +20,13 @@ public:
     template<typename T = void>
     struct AttributeKey {};
 
+    struct MergeOptions {
+        bool mark_as_used;
+        bool skip_private_variables;
+        const char* disallow_clobbering = nullptr;
+        std::vector<std::string> exclude_list{};
+    };
+
     Scope(Scope* parent);
     Scope(const Scope* parent);
 
@@ -30,6 +37,8 @@ public:
     const FileScope* file() const { return m_file; }
     // NOTE: detatch_from_parent must not be used with `FileScope`s
     void detatch_from_parent();
+
+    void merge_into(Scope* scope, MergeOptions options, const Span& error_span, Error* error) const;
 
     bool has_value(std::string_view name) const;
     const Value* get_value(std::string_view name, bool counts_as_used = true) const;

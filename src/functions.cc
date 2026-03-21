@@ -146,6 +146,47 @@ bool extract_variables_list_or_star(const Value& raw_value,
     return true;
 }
 
+
+void forward_variables_from_list(Scope* dst_scope,
+                                  const Scope* src_scope,
+                                  const std::vector<std::string>& variables_list,
+                                  const std::vector<Value>& variables_value_list,
+                                  const std::vector<std::string>& exclude_list,
+                                  const Span& variables_list_span,
+                                  Error* error) {
+    Scope::ValueMap from_scope_values = src_scope->get_values();
+    for (const auto& p : from_scope_values) {
+        std::vector<std::string>::const_iterator result = std::find(variables_list.begin(), variables_list.end(), p.first);
+        if (!(result != variables_list.end()))
+            continue;
+
+        auto exclude_iter = std::find_if(exclude_list.begin(),
+                                         exclude_list.end(),
+                                         [p](auto v) { return p.first == v; });
+
+        if (exclude_iter != exclude_list.end())
+            continue;
+
+        if (!dst_scope->has_value(p.first)) {
+            size_t idx = result - variables_list.begin();
+            const Value& name_value = variables_value_list[idx];
+            Span name_span = name_value.origin() ? *name_value.origin() : variables_list_span;
+            *error = Error(name_span,
+                           "Clobbering existing value",
+                           "The current scope already defines a value \"" + std::string(p.first) + "\".\n"
+                           "forward_variables_from() won't clobber existing values. If you want to\n"
+                           "merge lists you'll need to do that explicitly.");
+            const Value& clobbered_value = p.second;
+            if (clobbered_value.origin())
+                error->append_suberror(Error(*clobbered_value.origin(), "value being clobbered"));
+            return;
+        }
+
+        dst_scope->set_value(p.first, Value(p.second));
+        dst_scope->mark_as_used(p.first);
+    }
+}
+
 Value builtin_forward_variables_from(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
     ARGCK("forward_variables_from", 2, 3);
 
@@ -185,34 +226,23 @@ Value builtin_forward_variables_from(Scope* scope, Error* error, const Span& cal
         }
     }
 
-    Scope::ValueMap from_scope_values = from_scope.get_values();
-    for (const auto& p : from_scope_values) {
-        std::vector<std::string>::const_iterator result = std::find(variables_list.begin(), variables_list.end(), p.first);
-        if (!(is_wildcard || result != variables_list.end()))
-            continue;
-
-        if (std::find(exclude_filter.begin(), exclude_filter.end(), p.first) != exclude_filter.end())
-            continue;
-
-        if (!is_wildcard && scope->has_value(p.first)) {
-            size_t idx = result - variables_list.begin();
-            const Value& name_value = variables_list_or_star_value.as_list()[idx];
-            Span name_span = name_value.origin() ? *name_value.origin() : variables_list_or_star_span;
-            *error = Error(name_span,
-                           "Clobbering existing value",
-                           "The current scope already defines a value \"" + std::string(p.first) + "\".\n"
-                           "forward_variables_from() won't clobber existing values. If you want to\n"
-                           "merge lists you'll need to do that explicitly.");
-            const Value& clobbered_value = p.second;
-            if (clobbered_value.origin())
-                error->append_suberror(Error(*clobbered_value.origin(), "value being clobbered"));
-            return Value();
-        }
-
-        scope->set_value(p.first, Value(p.second));
-        scope->mark_as_used(p.first);
+    if (is_wildcard) {
+        Scope::MergeOptions options {
+            .mark_as_used = false,
+            .skip_private_variables = true,
+            .exclude_list = exclude_filter,
+        };
+        from_scope.merge_into(scope, options, call_span, error);
+        return Value();
     }
 
+    forward_variables_from_list(scope,
+                                &from_scope,
+                                variables_list,
+                                variables_list_or_star_value.as_list(),
+                                exclude_filter,
+                                variables_list_or_star_span,
+                                error);
     return Value();
 }
 
@@ -359,33 +389,12 @@ Value builtin_import(Scope* scope, Error* error, const Span& call_span, const st
     if (error->has_error()) 
         return Value();
 
-    Scope::ValueMap import_scope_values = import_scope->get_values();
-    for (const auto& p : import_scope_values) {
-        Value our_value;
-        if (p.first.starts_with("_")) continue;
-        if (scope->has_value(p.first) && (our_value = *scope->get_value(p.first, false)) != p.second) {
-            *error = Error(call_span,
-                           "Value collision",
-                           "This import contains \"" + std::string(p.first) + "\"");
-            const Value& clobbered_value = p.second;
-            if (clobbered_value.origin()) {
-                error->append_suberror(Error(*clobbered_value.origin(),
-                                             "defined here",
-                                             "Which would clobber the one in your current scope"));
-                if (our_value.origin())
-                    error->append_suberror(
-                            Error(*our_value.origin(),
-                                  "defined here",
-                                  "Executing import should not conflict with anything in the current\n"
-                                  "scope unless the values are indentical"));
-            }
-            return Value(); 
-        }
-
-        scope->set_value(p.first, Value(p.second));
-        scope->mark_as_used(p.first);
-    }
-
+    Scope::MergeOptions options {
+        .mark_as_used = true,
+        .skip_private_variables = true,
+        .disallow_clobbering = "import"
+    };
+    import_scope->merge_into(scope, options, call_span, error);
 
     return Value();
 }
