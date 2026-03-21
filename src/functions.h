@@ -25,6 +25,7 @@ namespace gnarl {
     LFF(len)                                \
     LFF(not_needed)                         \
     LFF(print)                              \
+    LFF(rebase_path)                        \
     LFF(split_list)                         \
     LFF(string_join)                        \
     LFF(string_replace)                     \

@@ -58,6 +58,15 @@ Path::Path(PathView view)
     : m_data(view.data(), view.size())
 { }
 
+
+bool Path::is_absolute() const {
+    return PathView(*this).is_absolute();
+}
+
+bool Path::is_source_absolute() const {
+    return PathView(*this).is_source_absolute();
+}
+
 PathView Path::parent() const {
     return PathView(*this).parent();
 }
@@ -185,7 +194,9 @@ do_parse:
                 *prev_kind != PathParser::Component::ROOT_DIR &&
                 *prev_kind != PathParser::Component::PARENT_DIR)
             components.pop_back();
-        else if (*prev_kind != PathParser::Component::ROOT_DIR)
+        else if (components.size() == 1 && *prev_kind != PathParser::Component::ROOT_DIR)
+            components.push_back(component);
+        else if (components.size() == 0)
             components.push_back(component);
     }
 

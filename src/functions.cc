@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <iostream>
 #include <optional>
 #include <span>
 #include <sstream>
@@ -495,6 +496,80 @@ Value builtin_print(Scope* scope, Error* error, const Span& call_span, const std
 
     printf("%s", result.c_str());
     return Value();
+}
+
+std::string rebase_path_impl(PathView path, PathView new_base, PathView current_base) {
+    Path normalized_path;
+    if (path.is_source_absolute() || path.is_source_absolute())
+        normalized_path = normalize(path);
+    else {
+        Path absolute(current_base);
+        absolute += path;
+        normalized_path = normalize(absolute);
+    }
+
+    if (new_base.size() == 0)
+        return std::string(normalized_path.c_str(), normalized_path.size());
+
+    ABORT("not implemented yet");
+}
+
+Value builtin_rebase_path(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {
+    ARGCK("rebase_path", 1, 3);
+
+    const Value& input_value = args[0];
+    if (input_value.kind() != Value::Kind::List && input_value.kind() != Value::Kind::String) {
+        *error = Error(call_span,
+                       "rebase_path requires a list or a string");
+        return Value();
+    }
+
+    std::vector<std::string> input_paths;
+    if (input_value.kind() == Value::Kind::List) {
+        for (const auto& v : input_value.as_list()) {
+            if (!v.typeck(Value::Kind::String, error))
+                return Value();
+            input_paths.push_back(v.as_string());
+        }
+    }
+
+    std::string new_base("");
+    std::string current_base_string(".");
+
+    if (args.size() > 1) {
+        const Value& new_base_value = args[1];
+        if (!new_base_value.typeck(Value::Kind::String, error))
+            return Value();
+        new_base = new_base_value.as_string();
+
+        if (args.size() > 2) {
+            const Value& current_base_value = args[2];
+            if (!current_base_value.typeck(Value::Kind::String, error))
+                return Value();
+            current_base_string = current_base_value.as_string();
+        }
+    }
+
+    Path current_base_path(current_base_string);
+    if (current_base_path.is_absolute() || current_base_path.is_source_absolute())
+        current_base_path = normalize(current_base_path);
+    else {
+        const FileScope* file = scope->file();
+        Path absolute = Path(file->input_file()->path().parent());
+        absolute += current_base_path;
+        current_base_path = normalize(absolute);
+    }
+
+    if (input_value.kind() == Value::Kind::String) {
+        const std::string& path = input_value.as_string();
+        return Value(nullptr, rebase_path_impl(path, new_base, current_base_path));
+    }
+
+    std::vector<Value> values;
+    for (const auto& path : input_paths)
+        values.push_back(Value(nullptr, rebase_path_impl(path, new_base, current_base_path)));
+
+    return Value(nullptr, std::move(values));
 }
 
 Value builtin_split_list(Scope* scope, Error* error, const Span& call_span, const std::vector<Value>& args) {

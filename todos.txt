@@ -30,7 +30,7 @@ Functions:
  _ print_stack_trace (TODO: Buildfile Targets)
  _ process_file_template (TODO: Tool variable expansions)
  _ read_file (TODO: PathIO, Value Conversion)
- _ rebase_path (TODO: PathIO)
+ X rebase_path (TODO: PathIO)
  _ set_defaults (TODO: Buildfile Targets)
  X split_list
  _ string_hash (TODO: Sha265)
@@ -47,4 +47,4 @@ Functions:
  _ source_set (target)
  _ static_library (target)
  _ target
- _ template
+ X template

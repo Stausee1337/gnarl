@@ -69,6 +69,8 @@ public:
     size_t size() const { return m_data.size(); }
     std::string_view string() const { return m_data; }
 
+    bool is_absolute() const;
+    bool is_source_absolute() const;
     PathView parent() const;
     std::string_view file() const;
 
